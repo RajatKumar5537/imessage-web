@@ -122,39 +122,61 @@ export async function POST(req: Request) {
 
     // 2. ACCEPT
     if (action === "accept") {
-      call.status = "accepted";
-      if (answer) call.answer = answer;
-      await call.save();
-      return NextResponse.json({ success: true, call });
+      const updateData: any = { status: "accepted" };
+      if (answer) {
+        updateData.answer = typeof answer === "string" ? answer : JSON.stringify(answer);
+      }
+      const updatedCall = await Call.findByIdAndUpdate(callId, updateData, { new: true });
+      return NextResponse.json({ success: true, call: updatedCall });
     }
 
     // 3. DECLINE / END
     if (action === "decline" || action === "end") {
-      call.status = action === "decline" ? "declined" : "ended";
-      call.endedAt = new Date();
-      if (call.startedAt) {
-        call.durationSec = Math.max(0, Math.floor((call.endedAt.getTime() - call.startedAt.getTime()) / 1000));
-      }
-      await call.save();
-      return NextResponse.json({ success: true, call });
+      const endedAt = new Date();
+      const existing = await Call.findById(callId).lean();
+      const durationSec = existing?.startedAt
+        ? Math.max(0, Math.floor((endedAt.getTime() - new Date(existing.startedAt).getTime()) / 1000))
+        : 0;
+      const updatedCall = await Call.findByIdAndUpdate(
+        callId,
+        {
+          status: action === "decline" ? "declined" : "ended",
+          endedAt,
+          durationSec,
+        },
+        { new: true }
+      );
+      return NextResponse.json({ success: true, call: updatedCall });
     }
 
-    // 4. SIGNAL ANSWER
+    // 4. SIGNAL OFFER
+    if (action === "signal-offer") {
+      const updatedCall = await Call.findByIdAndUpdate(
+        callId,
+        { offer: typeof offer === "string" ? offer : JSON.stringify(offer) },
+        { new: true }
+      );
+      return NextResponse.json({ success: true, call: updatedCall });
+    }
+
+    // 5. SIGNAL ANSWER
     if (action === "signal-answer") {
-      if (answer) call.answer = answer;
-      await call.save();
-      return NextResponse.json({ success: true });
+      const updatedCall = await Call.findByIdAndUpdate(
+        callId,
+        { answer: typeof answer === "string" ? answer : JSON.stringify(answer) },
+        { new: true }
+      );
+      return NextResponse.json({ success: true, call: updatedCall });
     }
 
-    // 5. ICE CANDIDATE
+    // 6. ICE CANDIDATE (Atomic $push prevents VersionError and lost candidates)
     if (action === "candidate") {
       if (candidate) {
-        if (isCaller) {
-          call.callerCandidates.push(candidate);
-        } else {
-          call.recipientCandidates.push(candidate);
-        }
-        await call.save();
+        const candStr = typeof candidate === "string" ? candidate : JSON.stringify(candidate);
+        const updateField = isCaller ? "callerCandidates" : "recipientCandidates";
+        await Call.findByIdAndUpdate(callId, {
+          $push: { [updateField]: candStr },
+        });
       }
       return NextResponse.json({ success: true });
     }
