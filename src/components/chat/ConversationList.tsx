@@ -224,13 +224,12 @@ export default function ConversationList({
         {/* 2. SEARCH BAR & SEGMENTED FILTER TABS */}
         <div className="p-3 sm:p-3.5 border-b border-white/10 bg-[#060612] flex-shrink-0">
           <div className="relative flex items-center w-full">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search or start a new chat"
-              className="w-full h-10 bg-white/[0.07] hover:bg-white/[0.1] focus:bg-[#111122] border border-white/10 focus:border-blue-500 rounded-xl pl-10 pr-9 text-xs text-white placeholder:text-slate-400 outline-none transition-all font-normal"
+              className="w-full h-10 bg-white/[0.07] hover:bg-white/[0.1] focus:bg-[#111122] border border-white/10 focus:border-blue-500 rounded-xl px-4 pr-9 text-xs text-white placeholder:text-slate-400 outline-none transition-all font-normal"
             />
             {searchQuery && (
               <button
