@@ -100,6 +100,16 @@ export default function ChatHeader({
     return `Last seen ${dateStr} at ${timeStr}`;
   };
 
+  const getTimerLabel = (hours?: number) => {
+    if (!hours || hours <= 0) return "Off";
+    if (Math.abs(hours - 1 / 60) < 0.001) return "1 Min";
+    if (hours < 1) return `${Math.round(hours * 60)}m`;
+    if (hours === 1) return "1h";
+    if (hours === 24) return "24h";
+    if (hours === 168) return "7d";
+    return `${hours}h`;
+  };
+
   return (
     <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 border-b border-white/10 bg-[#070712]/95 backdrop-blur-xl z-30 select-none transition-colors">
       {/* LEFT: PARTNER AVATAR, NAME & STATUS */}
@@ -167,7 +177,7 @@ export default function ChatHeader({
                   {conversation.lastSeen
                     ? formatLastSeen(conversation.lastSeen)
                     : conversation.disappearingHours && conversation.disappearingHours > 0
-                    ? `Disappearing • ${conversation.disappearingHours}h`
+                    ? `Disappearing • ${getTimerLabel(conversation.disappearingHours)}`
                     : "Offline"}
                 </span>
               )}
@@ -227,17 +237,22 @@ export default function ChatHeader({
                 className="fixed inset-0 z-40"
                 onClick={() => setShowDropdown(false)}
               />
-              <div className="absolute right-0 mt-2 w-52 bg-[#0c0c1e]/98 backdrop-blur-2xl border border-white/15 rounded-2xl p-1.5 shadow-2xl z-50 flex flex-col gap-1">
+              <div className="absolute right-0 mt-2.5 w-64 sm:w-72 bg-[#0d0d1c]/98 backdrop-blur-2xl border border-white/20 rounded-2xl p-2 sm:p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_25px_rgba(0,122,255,0.15)] z-50 flex flex-col gap-1">
                 <button
                   type="button"
                   onClick={() => {
                     onOpenInfo();
                     setShowDropdown(false);
                   }}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-200 hover:bg-white/10 text-left transition-all cursor-pointer"
+                  className="flex items-center gap-3 px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-slate-200 hover:text-white hover:bg-white/[0.08] text-left transition-all cursor-pointer group"
                 >
-                  <Users className="w-4 h-4 text-blue-400" />
-                  <span>Contact Information</span>
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-500/25 transition-colors">
+                    <Users className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <span className="font-semibold block">Contact Information</span>
+                    <span className="text-[10px] text-slate-400 block font-normal">View profile, media & privacy</span>
+                  </div>
                 </button>
 
                 <button
@@ -246,10 +261,15 @@ export default function ChatHeader({
                     onOpenSearch();
                     setShowDropdown(false);
                   }}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-slate-200 hover:bg-white/10 text-left transition-all cursor-pointer"
+                  className="flex items-center gap-3 px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-slate-200 hover:text-white hover:bg-white/[0.08] text-left transition-all cursor-pointer group"
                 >
-                  <Search className="w-4 h-4 text-blue-400" />
-                  <span>Search Messages</span>
+                  <div className="w-8 h-8 rounded-xl bg-white/[0.07] text-slate-300 flex items-center justify-center flex-shrink-0 group-hover:bg-white/[0.12] transition-colors">
+                    <Search className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <span className="font-semibold block">Search Messages</span>
+                    <span className="text-[10px] text-slate-400 block font-normal">Find text and documents</span>
+                  </div>
                 </button>
 
                 <div className="my-1 border-t border-white/10" />
@@ -260,10 +280,15 @@ export default function ChatHeader({
                     onClearChat();
                     setShowDropdown(false);
                   }}
-                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-red-400 hover:bg-red-500/15 text-left transition-all cursor-pointer font-medium"
+                  className="flex items-center gap-3 px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-red-400 hover:bg-red-500/15 text-left transition-all cursor-pointer group"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Clear Conversation History</span>
+                  <div className="w-8 h-8 rounded-xl bg-red-500/15 text-red-400 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500/25 transition-colors">
+                    <Trash2 className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <span className="font-semibold block">Clear Conversation History</span>
+                    <span className="text-[10px] text-red-400/70 block font-normal">Remove messages for your view</span>
+                  </div>
                 </button>
               </div>
             </>

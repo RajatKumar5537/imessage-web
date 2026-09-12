@@ -69,6 +69,16 @@ export default function ContactProfileModal({
     (m) => m.mediaType === "file" && !m.isDeleted
   );
 
+  const getTimerLabel = (hours?: number) => {
+    if (!hours || hours <= 0) return "Off";
+    if (Math.abs(hours - 1 / 60) < 0.001) return "1 Min timer";
+    if (hours < 1) return `${Math.round(hours * 60)} Mins timer`;
+    if (hours === 1) return "1 Hour timer";
+    if (hours === 24) return "24 Hours timer";
+    if (hours === 168) return "7 Days timer";
+    return `${hours}h timer`;
+  };
+
   const timerOptions = [
     { hours: 0, label: "Off" },
     { hours: 1 / 60, label: "1 Min" },
@@ -98,11 +108,9 @@ export default function ContactProfileModal({
             </div>
             <button
               onClick={onClose}
-              type="button"
-              className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-slate-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
-              title="Close"
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
             >
-              <X className="w-4.5 h-4.5" />
+              <X size={18} />
             </button>
           </div>
 
@@ -328,29 +336,30 @@ export default function ContactProfileModal({
                       <span className="text-xs font-bold text-white">Disappearing Messages</span>
                     </div>
                     <span className="text-xs text-blue-400 font-mono font-bold">
-                      {conversation.disappearingHours && conversation.disappearingHours > 0
-                        ? `${conversation.disappearingHours}h timer`
-                        : "Off"}
+                      {getTimerLabel(conversation.disappearingHours)}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
                     New messages in this chat will self-destruct for both participants after the selected duration.
                   </p>
                   <div className="grid grid-cols-5 gap-1.5 pt-1">
-                    {timerOptions.map((opt) => (
-                      <button
-                        key={opt.hours}
-                        type="button"
-                        onClick={() => onSetDisappearingTimer(opt.hours)}
-                        className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-                          conversation.disappearingHours === opt.hours
-                            ? "bg-[#007AFF] text-white shadow-md border border-blue-400/40"
-                            : "bg-white/[0.06] hover:bg-white/10 text-slate-300"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
+                    {timerOptions.map((opt) => {
+                      const isSelected = Math.abs((conversation.disappearingHours || 0) - opt.hours) < 0.001;
+                      return (
+                        <button
+                          key={opt.hours}
+                          type="button"
+                          onClick={() => onSetDisappearingTimer(opt.hours)}
+                          className={`py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                            isSelected
+                              ? "bg-[#007AFF] text-white shadow-md border border-blue-400/40"
+                              : "bg-white/[0.06] hover:bg-white/10 text-slate-300"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

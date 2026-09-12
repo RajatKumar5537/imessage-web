@@ -282,3 +282,60 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to create conversation" }, { status: 500 });
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    await dbConnect();
+    const currentUser = await User.findOne({ email: session.user.email.toLowerCase().trim() });
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    const currentUserId = currentUser._id.toString();
+
+    const { conversationId, disappearingHours, isPinned } = await req.json();
+    if (!conversationId) {
+      return NextResponse.json({ error: "conversationId is required" }, { status: 400 });
+    }
+
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      participants: currentUserId,
+    });
+
+    if (!conversation) {
+      return NextResponse.json({ error: "Conversation not found or unauthorized" }, { status: 404 });
+    }
+
+    if (disappearingHours !== undefined) {
+      conversation.disappearingHours = Number(disappearingHours);
+    }
+
+    if (isPinned !== undefined) {
+      if (isPinned) {
+        if (!conversation.isPinnedBy) conversation.isPinnedBy = [];
+        if (!conversation.isPinnedBy.includes(currentUserId)) {
+          conversation.isPinnedBy.push(currentUserId);
+        }
+      } else if (conversation.isPinnedBy) {
+        conversation.isPinnedBy = conversation.isPinnedBy.filter((id: string) => id !== currentUserId);
+      }
+    }
+
+    await conversation.save();
+
+    return NextResponse.json({
+      success: true,
+      conversationId: conversation._id.toString(),
+      disappearingHours: conversation.disappearingHours,
+    });
+  } catch (error: any) {
+    console.error("PATCH Conversation Error:", error);
+    return NextResponse.json({ error: "Failed to update conversation" }, { status: 500 });
+  }
+}
+

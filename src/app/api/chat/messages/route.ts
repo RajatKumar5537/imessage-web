@@ -59,9 +59,19 @@ export async function GET(req: Request) {
       }
     );
 
+    // Purge any expired disappearing messages
+    await Message.deleteMany({
+      conversationId,
+      expiresAt: { $ne: null, $lte: new Date() },
+    });
+
     const messages = await Message.find({
       conversationId,
       clearedFor: { $ne: currentUserId },
+      $or: [
+        { expiresAt: null },
+        { expiresAt: { $gt: new Date() } }
+      ],
     })
       .sort({ createdAt: 1 })
       .lean();

@@ -356,11 +356,27 @@ export default function PrimeChatApp() {
   const handleSetDisappearingTimer = async (hours: number) => {
     if (!activeConversationId) return;
     try {
-      // Set timer locally and refresh
+      // Optimistic local update
       setConversations((prev) =>
         prev.map((c) => (c._id === activeConversationId ? { ...c, disappearingHours: hours } : c))
       );
-    } catch (_) {}
+
+      // Persist to database
+      const res = await fetch("/api/chat/conversations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: activeConversationId,
+          disappearingHours: hours,
+        }),
+      });
+
+      if (res.ok) {
+        fetchConversations();
+      }
+    } catch (err) {
+      console.error("Failed to update disappearing timer:", err);
+    }
   };
 
   const handleTyping = async (isTyping: boolean) => {
