@@ -627,8 +627,8 @@ export default function PrimeChatApp() {
               />
 
               {/* MESSAGE FEED */}
-              <div className="flex-1 overflow-y-auto py-3 sm:py-4 px-2 sm:px-4 relative overscroll-contain">
-                <div className="max-w-4xl mx-auto w-full flex flex-col justify-end min-h-full">
+              <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 sm:py-4 relative overscroll-contain">
+                <div className="max-w-3xl mx-auto w-full flex flex-col justify-start min-h-full pb-8 sm:pb-12 pt-2">
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center min-h-[160px] my-auto text-center space-y-2.5 p-6 border border-dashed border-white/10 rounded-3xl bg-white/[0.03] backdrop-blur-md">
                       <div className="p-3 rounded-2xl bg-blue-500/20 text-[#007AFF] border border-blue-400/30 shadow-inner">
@@ -647,7 +647,10 @@ export default function PrimeChatApp() {
                     </div>
                   ) : (
                     messages.map((msg) => (
-                      <div key={msg._id} className={(msg.reactions?.length ?? 0) > 0 ? 'mb-4 sm:mb-5' : 'mb-2 sm:mb-2.5'}>
+                      <div
+                        key={msg._id}
+                        className={`w-full flex-shrink-0 ${(msg.reactions?.length ?? 0) > 0 ? "mb-5 sm:mb-6" : "mb-3 sm:mb-3.5"}`}
+                      >
                         <MessageBubble
                           message={msg}
                           currentUserId={currentUserId}
@@ -666,7 +669,7 @@ export default function PrimeChatApp() {
 
                   {/* LIVE TYPING BUBBLE (iOS 3-dot animation) */}
                   {typingUsers.length > 0 && (
-                    <div className="flex items-center gap-2 px-4 py-1">
+                    <div className="flex items-center gap-2 px-4 py-1 flex-shrink-0 mb-2">
                       <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#26252A] border border-white/10 text-white text-xs shadow-md">
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" />
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce [animation-delay:0.2s]" />
@@ -676,6 +679,7 @@ export default function PrimeChatApp() {
                     </div>
                   )}
 
+                  <div className="h-4 sm:h-6 flex-shrink-0" />
                   <div ref={chatBottomRef} />
                 </div>
               </div>

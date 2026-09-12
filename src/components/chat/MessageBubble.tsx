@@ -140,7 +140,7 @@ export default function MessageBubble({
           </div>
         )}
 
-        <div className={`flex items-end gap-2 max-w-[88%] sm:max-w-md md:max-w-lg lg:max-w-xl ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+        <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-md md:max-w-lg lg:max-w-xl ${isMe ? "flex-row-reverse" : "flex-row"}`}>
           {!isMe && showAvatar && (
             <img
               src={message.senderAvatar || getFallbackAvatar(message.senderName, "user")}
@@ -185,12 +185,12 @@ export default function MessageBubble({
               transition={motionProps.transition}
               onContextMenu={(e) => { e.preventDefault(); setShowTapback(true); }}
               onClick={() => setShowActions((v) => !v)}
-              className={`relative min-w-[75px] rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-md select-none touch-pan-y cursor-pointer ${
+              className={`relative min-w-[85px] rounded-[18px] px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-md select-none touch-pan-y cursor-pointer ${
                 message.isDeleted
                   ? "bg-white/[0.04] text-slate-400 italic text-xs border border-white/5"
                   : isMe
-                  ? "bg-[#007AFF] text-white rounded-tr-sm"
-                  : "bg-[#26252A] border border-white/10 text-slate-100 rounded-tl-sm"
+                  ? "bg-[#007AFF] text-white rounded-br-[5px]"
+                  : "bg-[#26252A] border border-white/10 text-slate-100 rounded-bl-[5px]"
               }`}
             >
               {/* Group sender name for incoming message only */}
