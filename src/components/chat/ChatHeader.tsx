@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ChevronDown,
   Phone,
@@ -53,6 +53,20 @@ export default function ChatHeader({
   typingUserName = "",
 }: ChatHeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handleOutsideClick = (e: MouseEvent | TouchEvent | PointerEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("pointerdown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsideClick);
+    };
+  }, [showDropdown]);
 
   const getInitials = (name: string) => {
     return name
@@ -221,7 +235,7 @@ export default function ChatHeader({
         </button>
 
         {/* Dropdown Options */}
-        <div className="relative">
+        <div ref={dropdownRef} className="relative">
           <button
             type="button"
             onClick={() => setShowDropdown(!showDropdown)}

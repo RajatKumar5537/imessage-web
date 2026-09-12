@@ -318,7 +318,7 @@ export default function MessageBubble({
               transition={motionProps.transition}
               onContextMenu={(e) => { e.preventDefault(); setShowTapback(true); }}
               onClick={() => setShowActions((v) => !v)}
-              className={`relative w-fit max-w-full rounded-[18px] px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-sm select-none touch-pan-y cursor-pointer ${
+              className={`relative w-fit max-w-full rounded-[18px] px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-sm select-none touch-pan-y cursor-pointer flex flex-col justify-center min-h-[36px] ${
                 message.isDeleted
                   ? "bg-white/[0.05] text-slate-400 italic border border-white/5"
                   : isMe
@@ -351,7 +351,7 @@ export default function MessageBubble({
                   </div>
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="flex flex-col justify-center w-full">
                   {message.mediaType === "image" && message.mediaData && (
                     <div className="relative rounded-2xl overflow-hidden bg-black/30 mb-1 group/media">
                       <img
@@ -407,19 +407,21 @@ export default function MessageBubble({
                       <Download className="w-4 h-4 opacity-80 hover:opacity-100 ml-1" />
                     </a>
                   )}
-                  {/* Clean Native iMessage Typography */}
+                  {/* Clean Native iMessage Typography Centered in Middle */}
                   {message.text && (
-                    message.effect === "invisible_ink" ? (
-                      <InvisibleInk>
-                        <p className="whitespace-pre-wrap break-words leading-[1.38] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text">
+                    <div className="flex flex-col justify-center my-auto">
+                      {message.effect === "invisible_ink" ? (
+                        <InvisibleInk>
+                          <p className="whitespace-pre-wrap break-words leading-[1.32] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text m-0 p-0">
+                            {message.text}
+                          </p>
+                        </InvisibleInk>
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words leading-[1.32] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text m-0 p-0">
                           {message.text}
                         </p>
-                      </InvisibleInk>
-                    ) : (
-                      <p className="whitespace-pre-wrap break-words leading-[1.38] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text">
-                        {message.text}
-                      </p>
-                    )
+                      )}
+                    </div>
                   )}
                 </div>
               )}

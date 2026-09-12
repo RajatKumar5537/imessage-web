@@ -285,13 +285,30 @@ export default function CallModal({
           <div className="flex items-center gap-2">
             {isConnected && (
               <button
+                type="button"
                 onClick={() => setIsFloatingPiP(true)}
-                className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition-all"
+                className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
                 title="Minimize to Picture-in-Picture"
               >
                 <Minimize2 className="w-4 h-4" />
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                soundEngine.stopRingtone();
+                cleanupMedia();
+                if (isIncoming) {
+                  onDeclineCall();
+                } else {
+                  onEndCall();
+                }
+              }}
+              className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+              title="Close Call"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -350,16 +367,24 @@ export default function CallModal({
             /* INCOMING ACTIONS: ACCEPT OR DECLINE */
             <div className="flex items-center gap-6">
               <button
-                onClick={onDeclineCall}
-                className="w-14 h-14 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-500/30 transition-all hover:scale-105 active:scale-95"
+                type="button"
+                onClick={() => {
+                  soundEngine.stopRingtone();
+                  onDeclineCall();
+                }}
+                className="w-14 h-14 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-500/30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 title="Decline Call"
               >
                 <PhoneOff className="w-6 h-6" />
               </button>
 
               <button
-                onClick={onAcceptCall}
-                className="w-14 h-14 flex items-center justify-center rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95"
+                type="button"
+                onClick={() => {
+                  soundEngine.stopRingtone();
+                  onAcceptCall();
+                }}
+                className="w-14 h-14 flex items-center justify-center rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 title="Accept Call"
               >
                 <Phone className="w-6 h-6" />
@@ -370,8 +395,9 @@ export default function CallModal({
             <div className="flex items-center gap-3">
               {/* Mic Toggle */}
               <button
+                type="button"
                 onClick={toggleMute}
-                className={`w-12 h-12 flex items-center justify-center rounded-full transition-all ${
+                className={`w-12 h-12 flex items-center justify-center rounded-full transition-all cursor-pointer ${
                   isMuted ? "bg-red-600/30 text-red-400 border border-red-500" : "bg-white/10 text-white hover:bg-white/20"
                 }`}
                 title={isMuted ? "Unmute Mic" : "Mute Mic"}
@@ -382,8 +408,9 @@ export default function CallModal({
               {/* Video Camera Toggle */}
               {call.callType === "video" && (
                 <button
+                  type="button"
                   onClick={toggleVideo}
-                  className={`w-12 h-12 flex items-center justify-center rounded-full transition-all ${
+                  className={`w-12 h-12 flex items-center justify-center rounded-full transition-all cursor-pointer ${
                     isVideoOff ? "bg-red-600/30 text-red-400 border border-red-500" : "bg-white/10 text-white hover:bg-white/20"
                   }`}
                   title={isVideoOff ? "Turn Video On" : "Turn Video Off"}
@@ -395,8 +422,9 @@ export default function CallModal({
               {/* Screen Share */}
               {call.callType === "video" && (
                 <button
+                  type="button"
                   onClick={toggleScreenShare}
-                  className={`w-12 h-12 flex items-center justify-center rounded-full transition-all ${
+                  className={`w-12 h-12 flex items-center justify-center rounded-full transition-all cursor-pointer ${
                     isScreenSharing ? "bg-blue-600 text-white" : "bg-white/10 text-white hover:bg-white/20"
                   }`}
                   title="Share Screen"
@@ -407,8 +435,13 @@ export default function CallModal({
 
               {/* Hang Up Button */}
               <button
-                onClick={onEndCall}
-                className="w-14 h-14 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500 text-white shadow-xl shadow-red-500/40 transition-all hover:scale-105 active:scale-95 ml-2"
+                type="button"
+                onClick={() => {
+                  soundEngine.stopRingtone();
+                  cleanupMedia();
+                  onEndCall();
+                }}
+                className="w-14 h-14 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500 text-white shadow-xl shadow-red-500/40 transition-all hover:scale-105 active:scale-95 ml-2 cursor-pointer"
                 title="End Call"
               >
                 <PhoneOff className="w-6 h-6" />

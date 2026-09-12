@@ -266,6 +266,41 @@ export default function PrimeChatApp() {
     return () => clearInterval(interval);
   }, [status, activeConversationId]);
 
+  // Dedicated rapid call signaling poller (600ms during ringing/call, 1000ms idle)
+  useEffect(() => {
+    if (status !== "authenticated") return;
+
+    let isPolling = false;
+    const pollCall = async () => {
+      if (isPolling) return;
+      isPolling = true;
+      try {
+        const callRes = await fetch("/api/chat/call");
+        if (callRes.ok) {
+          const callData = await callRes.json();
+          setActiveCall((prev: any) => {
+            if (!callData) {
+              if (prev) soundEngine.stopRingtone();
+              return null;
+            }
+            if (callData.status === "declined" || callData.status === "ended") {
+              soundEngine.stopRingtone();
+              return null;
+            }
+            return callData;
+          });
+        }
+      } catch (_) {} finally {
+        isPolling = false;
+      }
+    };
+
+    pollCall();
+    const intervalTime = activeCall ? 600 : 1000;
+    const interval = setInterval(pollCall, intervalTime);
+    return () => clearInterval(interval);
+  }, [status, !!activeCall]);
+
   // Active conversation object
   const activeConversation: any = conversations.find((c) => c._id === activeConversationId);
 
@@ -534,48 +569,52 @@ export default function PrimeChatApp() {
 
   const handleAcceptCall = async () => {
     if (!activeCall) return;
+    soundEngine.stopRingtone();
+    const callId = activeCall._id;
+    setActiveCall((prev: any) => ({ ...prev, status: "accepted" }));
     try {
-      const res = await fetch("/api/chat/call", {
+      await fetch("/api/chat/call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "accept",
-          callId: activeCall._id,
+          callId,
         }),
       });
-      if (res.ok) {
-        setActiveCall((prev: any) => ({ ...prev, status: "accepted" }));
-      }
     } catch (_) {}
   };
 
   const handleDeclineCall = async () => {
     if (!activeCall) return;
+    soundEngine.stopRingtone();
+    const callId = activeCall._id;
+    setActiveCall(null);
     try {
       await fetch("/api/chat/call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "decline",
-          callId: activeCall._id,
+          callId,
         }),
       });
-      setActiveCall(null);
     } catch (_) {}
   };
 
   const handleEndCall = async () => {
     if (!activeCall) return;
+    soundEngine.stopRingtone();
+    const callId = activeCall._id;
+    setActiveCall(null);
     try {
       await fetch("/api/chat/call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "end",
-          callId: activeCall._id,
+          callId,
         }),
       });
-      setActiveCall(null);
     } catch (_) {}
   };
 
