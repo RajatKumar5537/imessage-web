@@ -318,7 +318,7 @@ export default function MessageBubble({
               transition={motionProps.transition}
               onContextMenu={(e) => { e.preventDefault(); setShowTapback(true); }}
               onClick={() => setShowActions((v) => !v)}
-              className={`relative w-fit max-w-full rounded-[18px] px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-sm select-none touch-pan-y cursor-pointer flex flex-col justify-center min-h-[36px] ${
+              className={`relative w-fit min-w-[72px] sm:min-w-[80px] max-w-full rounded-[18px] px-4 py-2 sm:px-5 sm:py-2.5 shadow-sm select-none touch-pan-y cursor-pointer flex flex-col justify-center min-h-[38px] ${
                 message.isDeleted
                   ? "bg-white/[0.05] text-slate-400 italic border border-white/5"
                   : isMe
@@ -407,17 +407,21 @@ export default function MessageBubble({
                       <Download className="w-4 h-4 opacity-80 hover:opacity-100 ml-1" />
                     </a>
                   )}
-                  {/* Clean Native iMessage Typography Centered in Middle */}
+                  {/* Clean Native iMessage Typography with Proportional Width */}
                   {message.text && (
-                    <div className="flex flex-col justify-center my-auto">
+                    <div className="flex flex-col justify-center my-auto w-full">
                       {message.effect === "invisible_ink" ? (
                         <InvisibleInk>
-                          <p className="whitespace-pre-wrap break-words leading-[1.32] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text m-0 p-0">
+                          <p className="whitespace-pre-wrap break-words leading-[1.35] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text m-0 p-0 text-center">
                             {message.text}
                           </p>
                         </InvisibleInk>
                       ) : (
-                        <p className="whitespace-pre-wrap break-words leading-[1.32] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text m-0 p-0">
+                        <p
+                          className={`whitespace-pre-wrap break-words leading-[1.35] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text m-0 p-0 ${
+                            message.text.includes("\n") || message.text.length > 16 ? "text-left" : "text-center"
+                          }`}
+                        >
                           {message.text}
                         </p>
                       )}

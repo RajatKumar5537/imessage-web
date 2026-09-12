@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import VoiceMemoPlayer from "./VoiceMemoPlayer";
+import MediaViewerModal from "./MediaViewerModal";
 import { getFallbackAvatar } from "@/lib/avatars";
 
 interface ContactProfileModalProps {
@@ -55,6 +56,24 @@ export default function ContactProfileModal({
 }: ContactProfileModalProps) {
   const [activeTab, setActiveTab] = useState<"media" | "audio" | "docs" | "settings">("media");
   const [isMuted, setIsMuted] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<{
+    type: "image" | "video";
+    data: string;
+    name?: string | null;
+    size?: string | null;
+  } | null>(null);
+
+  const handleDownloadMedia = (url: string, name?: string | null, type: "image" | "video" = "image", e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!url) return;
+    const link = document.createElement("a");
+    link.href = url;
+    const ext = type === "video" ? "mp4" : "jpg";
+    link.download = name || `media_${Date.now()}.${ext}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (!isOpen) return null;
 
@@ -253,16 +272,44 @@ export default function ContactProfileModal({
                 ) : (
                   <div className="grid grid-cols-3 gap-2.5">
                     {photoVideos.map((m) => (
-                      <div key={m._id} className="relative aspect-square rounded-2xl overflow-hidden bg-black/40 border border-white/10 shadow-sm">
+                      <div
+                        key={m._id}
+                        onClick={() =>
+                          setSelectedMedia({
+                            type: m.mediaType === "video" ? "video" : "image",
+                            data: m.mediaData,
+                            name: m.mediaName,
+                            size: m.mediaSize,
+                          })
+                        }
+                        className="relative aspect-square rounded-2xl overflow-hidden bg-black/40 border border-white/10 shadow-sm group cursor-pointer"
+                        title="Click to view full screen"
+                      >
                         {m.mediaType === "video" ? (
-                          <video src={m.mediaData} className="w-full h-full object-cover" />
+                          <video src={m.mediaData} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                         ) : (
                           <img
                             src={m.mediaData}
                             alt={m.mediaName || "Media"}
-                            className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                           />
                         )}
+                        {/* Quick Download Overlay Button */}
+                        <button
+                          type="button"
+                          onClick={(e) =>
+                            handleDownloadMedia(
+                              m.mediaData,
+                              m.mediaName,
+                              m.mediaType === "video" ? "video" : "image",
+                              e
+                            )
+                          }
+                          className="absolute top-1.5 right-1.5 p-1.5 rounded-full bg-black/60 hover:bg-black/85 text-white backdrop-blur-md border border-white/20 shadow-md transition-all hover:scale-110 active:scale-95 z-10 cursor-pointer opacity-90 group-hover:opacity-100"
+                          title="Download Media"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -390,6 +437,17 @@ export default function ContactProfileModal({
             )}
           </div>
         </motion.div>
+        {/* FULLSCREEN MEDIA VIEWER MODAL */}
+        {selectedMedia && (
+          <MediaViewerModal
+            isOpen={!!selectedMedia}
+            mediaType={selectedMedia.type}
+            mediaData={selectedMedia.data}
+            mediaName={selectedMedia.name}
+            mediaSize={selectedMedia.size}
+            onClose={() => setSelectedMedia(null)}
+          />
+        )}
       </div>
     </AnimatePresence>
   );
