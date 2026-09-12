@@ -94,28 +94,44 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       const explode = (x: number, y: number, color: string) => {
         if (!isRunning) return;
         soundEngine.playFireworksCrackle();
-        const count = 75 + Math.floor(Math.random() * 45);
+        const count = 110 + Math.floor(Math.random() * 55);
         for (let i = 0; i < count; i++) {
           const angle = Math.random() * Math.PI * 2;
-          const speed = Math.random() * 5.5 + 1.5;
+          const speed = Math.random() * 6 + 1.8;
           particles.push({
             x,
             y,
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed,
             alpha: 1,
-            color: Math.random() > 0.3 ? color : colors[Math.floor(Math.random() * colors.length)],
-            size: Math.random() * 2.2 + 1.2,
-            decay: Math.random() * 0.02 + 0.012,
-            friction: 0.96,
-            gravity: 0.08,
+            color: Math.random() > 0.25 ? color : colors[Math.floor(Math.random() * colors.length)],
+            size: Math.random() * 2.5 + 1.2,
+            decay: Math.random() * 0.018 + 0.009,
+            friction: 0.965,
+            gravity: 0.075,
           });
         }
       };
 
+      // Continuous fireworks rocket launches throughout the active duration
       createRocket();
-      timeoutIds.push(setTimeout(createRocket, 280));
-      timeoutIds.push(setTimeout(createRocket, 650));
+      timeoutIds.push(setTimeout(createRocket, 180));
+      timeoutIds.push(setTimeout(createRocket, 420));
+      timeoutIds.push(setTimeout(createRocket, 700));
+
+      const barrageInterval = setInterval(() => {
+        if (!isRunning) return;
+        createRocket();
+        // Double rocket burst frequently
+        if (Math.random() > 0.35) {
+          setTimeout(createRocket, 160 + Math.random() * 120);
+        }
+        // Triple rocket grand burst occasionally
+        if (Math.random() > 0.65) {
+          setTimeout(createRocket, 320 + Math.random() * 100);
+        }
+      }, 550);
+      timeoutIds.push(barrageInterval);
 
       const render = () => {
         if (!isRunning || !ctx) return;

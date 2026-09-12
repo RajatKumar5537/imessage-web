@@ -662,7 +662,7 @@ export default function PrimeChatApp() {
                 ref={chatContainerRef}
                 className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4 relative overscroll-contain"
               >
-                <div className="w-full flex flex-col justify-start min-h-full pb-8 sm:pb-12 pt-2">
+                <div className="w-full flex flex-col gap-y-4 sm:gap-y-5 justify-start min-h-full pb-8 sm:pb-12 pt-2">
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center min-h-[160px] my-auto text-center space-y-2.5 p-6 border border-dashed border-white/10 rounded-3xl bg-white/[0.03] backdrop-blur-md">
                       <div className="p-3 rounded-2xl bg-blue-500/20 text-[#007AFF] border border-blue-400/30 shadow-inner">
@@ -683,7 +683,7 @@ export default function PrimeChatApp() {
                     messages.map((msg) => (
                       <div
                         key={msg._id}
-                        className={`w-full flex-shrink-0 ${(msg.reactions?.length ?? 0) > 0 ? "mb-6 sm:mb-7" : "mb-4 sm:mb-4.5"}`}
+                        className={`w-full flex-shrink-0 ${(msg.reactions?.length ?? 0) > 0 ? "mb-4 sm:mb-5" : "mb-1.5 sm:mb-2"}`}
                       >
                         <MessageBubble
                           message={msg}

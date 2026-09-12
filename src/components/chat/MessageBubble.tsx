@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Check,
@@ -20,6 +20,7 @@ import InvisibleInk from "../effects/InvisibleInk";
 import VoiceMemoPlayer from "./VoiceMemoPlayer";
 import MessageInfoModal from "./MessageInfoModal";
 import { getFallbackAvatar } from "@/lib/avatars";
+import { soundEngine } from "@/lib/audio";
 
 interface ReactionItem {
   userId: string;
@@ -86,6 +87,80 @@ export default function MessageBubble({
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
   const [copied, setCopied] = useState(false);
+
+  // Universal gesture swipe (left or right) to reply
+  const [swipeOffset, setSwipeOffset] = useState<number>(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const pointerStartXRef = useRef<number>(0);
+  const pointerStartYRef = useRef<number>(0);
+  const isDraggingRef = useRef<boolean>(false);
+  const activePointerIdRef = useRef<number | null>(null);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    pointerStartXRef.current = e.clientX;
+    pointerStartYRef.current = e.clientY;
+    isDraggingRef.current = false;
+    activePointerIdRef.current = e.pointerId;
+    setSwipeOffset(0);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointerIdRef.current !== e.pointerId) return;
+    const deltaX = e.clientX - pointerStartXRef.current;
+    const deltaY = e.clientY - pointerStartYRef.current;
+
+    if (!isDraggingRef.current) {
+      if (Math.abs(deltaX) > 6 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+        isDraggingRef.current = true;
+        setIsSwiping(true);
+        try {
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        } catch (_) {}
+      } else if (Math.abs(deltaY) > 8) {
+        return;
+      }
+    }
+
+    if (isDraggingRef.current) {
+      // Damped smooth spring resistance
+      const damped = deltaX > 0 ? Math.min(85, deltaX * 0.75) : Math.max(-85, deltaX * 0.75);
+      setSwipeOffset(damped);
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingRef.current) {
+      // Swiping either left or right past 35px triggers reply!
+      if (Math.abs(swipeOffset) > 35) {
+        soundEngine.playTapback();
+        onReply(message);
+      }
+    }
+
+    try {
+      if (activePointerIdRef.current !== null) {
+        (e.currentTarget as HTMLElement).releasePointerCapture(activePointerIdRef.current);
+      }
+    } catch (_) {}
+
+    activePointerIdRef.current = null;
+    isDraggingRef.current = false;
+    setIsSwiping(false);
+    setSwipeOffset(0);
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    try {
+      if (activePointerIdRef.current !== null) {
+        (e.currentTarget as HTMLElement).releasePointerCapture(activePointerIdRef.current);
+      }
+    } catch (_) {}
+    activePointerIdRef.current = null;
+    isDraggingRef.current = false;
+    setIsSwiping(false);
+    setSwipeOffset(0);
+  };
 
   const isMe = message.isMe;
 
@@ -162,7 +237,31 @@ export default function MessageBubble({
             />
           )}
 
-          <div className="relative group">
+          <div
+            className="relative group touch-pan-y"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
+            style={{
+              transform: swipeOffset !== 0 ? `translateX(${swipeOffset}px)` : "none",
+              transition: isSwiping ? "none" : "transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1)",
+            }}
+          >
+            {/* Visual Reply Cue on swipe left or right */}
+            {isSwiping && Math.abs(swipeOffset) > 12 && (
+              <div
+                className={`absolute top-1/2 -translate-y-1/2 z-0 flex items-center justify-center w-7 h-7 rounded-full bg-blue-500/30 text-blue-400 border border-blue-400/40 pointer-events-none transition-transform ${
+                  swipeOffset > 0 ? "-left-9" : "-right-9"
+                }`}
+                style={{
+                  transform: `translateY(-50%) scale(${Math.min(1.15, Math.abs(swipeOffset) / 35)})`,
+                  opacity: Math.min(1, Math.abs(swipeOffset) / 25),
+                }}
+              >
+                <Reply className="w-4 h-4 text-[#007AFF]" />
+              </div>
+            )}
             {/* TAPBACK REACTION POPUP */}
             <AnimatePresence>
               {showTapback && (
