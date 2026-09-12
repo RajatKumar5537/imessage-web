@@ -190,7 +190,9 @@ export default function MessageBubble({
 
   const handleCopy = () => {
     if (message.text) {
-      navigator.clipboard.writeText(message.text).catch(() => {});
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(message.text).catch(() => {});
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     }

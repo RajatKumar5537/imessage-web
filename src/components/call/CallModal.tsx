@@ -12,6 +12,7 @@ import {
   Maximize2,
   Minimize2,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { soundEngine } from "@/lib/audio";
@@ -50,6 +51,58 @@ const RTC_CONFIG: RTCConfiguration = {
   ],
 };
 
+// Resilient media stream requester with secure-context check & legacy fallback
+async function requestUserMedia(callType: "audio" | "video"): Promise<MediaStream | null> {
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return null;
+  }
+
+  // Modern navigator.mediaDevices (available in secure contexts: HTTPS or localhost)
+  if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function") {
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: callType === "video",
+      });
+    } catch (videoErr) {
+      console.warn("Video getUserMedia failed, attempting audio-only:", videoErr);
+      try {
+        return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      } catch (audioErr) {
+        console.warn("Audio getUserMedia failed:", audioErr);
+        return null;
+      }
+    }
+  }
+
+  // Legacy webkit/moz fallbacks
+  const legacyGetUserMedia =
+    (navigator as any).getUserMedia ||
+    (navigator as any).webkitGetUserMedia ||
+    (navigator as any).mozGetUserMedia ||
+    (navigator as any).msGetUserMedia;
+
+  if (legacyGetUserMedia) {
+    return new Promise<MediaStream | null>((resolve) => {
+      legacyGetUserMedia.call(
+        navigator,
+        { audio: true, video: callType === "video" },
+        (s: MediaStream) => resolve(s),
+        () => {
+          legacyGetUserMedia.call(
+            navigator,
+            { audio: true, video: false },
+            (s: MediaStream) => resolve(s),
+            () => resolve(null)
+          );
+        }
+      );
+    });
+  }
+
+  return null;
+}
+
 export default function CallModal({
   call,
   currentUserId,
@@ -63,6 +116,7 @@ export default function CallModal({
   const [isFloatingPiP, setIsFloatingPiP] = useState(false);
   const [callSeconds, setCallSeconds] = useState(0);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
+  const [mediaWarning, setMediaWarning] = useState<string | null>(null);
   const [, setLocalStreamState] = useState<MediaStream | null>(null);
   const [, setRemoteStreamState] = useState<MediaStream | null>(null);
 
@@ -171,16 +225,18 @@ export default function CallModal({
 
   // Peer Connection factory
   const getOrCreatePeerConnection = useCallback(
-    (stream: MediaStream): RTCPeerConnection => {
+    (stream: MediaStream | null): RTCPeerConnection => {
       if (pcRef.current) return pcRef.current;
 
       const pc = new RTCPeerConnection(RTC_CONFIG);
       pcRef.current = pc;
 
-      // Add local tracks to peer connection
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream);
-      });
+      // Add local tracks if media is accessible
+      if (stream) {
+        stream.getTracks().forEach((track) => {
+          pc.addTrack(track, stream);
+        });
+      }
 
       // Local ICE candidate generated -> send to signaling server
       pc.onicecandidate = (event) => {
@@ -239,28 +295,27 @@ export default function CallModal({
 
     const startCaller = async () => {
       try {
-        let stream: MediaStream;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: call.callType === "video",
-          });
-        } catch (mediaErr) {
-          console.warn("Video getUserMedia failed, trying audio only:", mediaErr);
-          stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        }
+        const stream = await requestUserMedia(call.callType);
 
         if (isCancelled) {
-          stream.getTracks().forEach((t) => t.stop());
+          if (stream) stream.getTracks().forEach((t) => t.stop());
           return;
         }
 
-        localStreamRef.current = stream;
-        setLocalStreamState(stream);
+        if (stream) {
+          localStreamRef.current = stream;
+          setLocalStreamState(stream);
 
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-          localVideoRef.current.play().catch(() => {});
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
+            localVideoRef.current.play().catch(() => {});
+          }
+        } else {
+          if (typeof window !== "undefined" && !window.isSecureContext) {
+            setMediaWarning("Camera & Mic require HTTPS or localhost. If on mobile, please open the HTTPS URL (https://imessage-web.vercel.app).");
+          } else {
+            setMediaWarning("Camera / microphone access was denied or not found.");
+          }
         }
 
         const pc = getOrCreatePeerConnection(stream);
@@ -299,23 +354,22 @@ export default function CallModal({
     isRecipientStartedRef.current = true;
 
     try {
-      let stream: MediaStream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: call.callType === "video",
-        });
-      } catch (mediaErr) {
-        console.warn("Recipient video getUserMedia failed, trying audio only:", mediaErr);
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-      }
+      const stream = await requestUserMedia(call.callType);
 
-      localStreamRef.current = stream;
-      setLocalStreamState(stream);
+      if (stream) {
+        localStreamRef.current = stream;
+        setLocalStreamState(stream);
 
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-        localVideoRef.current.play().catch(() => {});
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+          localVideoRef.current.play().catch(() => {});
+        }
+      } else {
+        if (typeof window !== "undefined" && !window.isSecureContext) {
+          setMediaWarning("Camera & Mic require HTTPS or localhost. If on mobile, please open the HTTPS URL (https://imessage-web.vercel.app).");
+        } else {
+          setMediaWarning("Camera / microphone access was denied or not found.");
+        }
       }
 
       const pc = getOrCreatePeerConnection(stream);
@@ -483,6 +537,11 @@ export default function CallModal({
   const toggleScreenShare = async () => {
     try {
       if (!isScreenSharing) {
+        if (!navigator?.mediaDevices?.getDisplayMedia) {
+          alert("Screen sharing is not supported on mobile browsers or insecure connections.");
+          return;
+        }
+
         const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
         screenStreamRef.current = screenStream;
 
@@ -663,6 +722,14 @@ export default function CallModal({
             </button>
           </div>
         </div>
+
+        {/* INSECURE CONTEXT / PERMISSION WARNING BANNER */}
+        {mediaWarning && (
+          <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 flex items-center gap-2.5 text-amber-300 text-xs z-20">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+            <span className="flex-1 leading-snug">{mediaWarning}</span>
+          </div>
+        )}
 
         {/* MAIN VIDEO / AVATAR VIEWPORT */}
         <div className="relative flex-1 min-h-[380px] bg-neutral-950 flex items-center justify-center overflow-hidden">

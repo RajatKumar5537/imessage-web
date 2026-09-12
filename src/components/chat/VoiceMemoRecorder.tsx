@@ -44,6 +44,11 @@ export default function VoiceMemoRecorder({
 
   const startRecording = async () => {
     try {
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        alert("Audio recording requires a secure connection (HTTPS or localhost). Please open via HTTPS (e.g. https://imessage-web.vercel.app).");
+        onCancel();
+        return;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
 
