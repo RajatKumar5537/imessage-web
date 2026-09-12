@@ -304,25 +304,23 @@ export default function MessageBubble({
               transition={motionProps.transition}
               onContextMenu={(e) => { e.preventDefault(); setShowTapback(true); }}
               onClick={() => setShowActions((v) => !v)}
-              className={`relative min-w-[130px] max-w-full rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs shadow-md select-none touch-pan-y cursor-pointer ${
+              className={`relative w-fit max-w-full rounded-[20px] px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-sm select-none touch-pan-y cursor-pointer ${
                 message.isDeleted
-                  ? "bg-white/[0.04] text-slate-400 italic border border-white/5"
+                  ? "bg-white/[0.05] text-slate-400 italic border border-white/5"
                   : isMe
-                  ? "bg-[#007AFF] text-white border border-blue-400/20 rounded-tr-xs"
-                  : "bg-[#1C1C1E] border border-white/10 text-slate-100 rounded-tl-xs"
+                  ? "bg-[#007AFF] text-white rounded-br-[4px]"
+                  : "bg-[#26252A] text-white rounded-bl-[4px]"
               }`}
             >
-              {/* Sender Name Header - moved right with pl-1.5 */}
-              {!message.isDeleted && (
-                <div className="flex items-center justify-between gap-2 mb-1 pl-1.5 pr-1">
-                  <span className={`text-[10.5px] font-bold tracking-wide ${isMe ? "text-blue-100" : "text-blue-400"}`}>
-                    {message.senderName || "Member"}
-                  </span>
+              {/* Sender Name only in Group Chats on received messages */}
+              {!isMe && showAvatar && !message.isDeleted && (
+                <div className="text-[11px] font-semibold text-blue-400 mb-0.5 select-none">
+                  {message.senderName || "Member"}
                 </div>
               )}
 
               {message.isDeleted ? (
-                <span className="text-slate-400 italic text-xs pl-1.5">This message was deleted</span>
+                <span className="text-slate-400 italic text-[14px]">This message was deleted</span>
               ) : isEditing ? (
                 <div className="space-y-1.5 my-1" onClick={(e) => e.stopPropagation()}>
                   <input
@@ -341,13 +339,13 @@ export default function MessageBubble({
               ) : (
                 <div className="space-y-1">
                   {message.mediaType === "image" && message.mediaData && (
-                    <div className="rounded-xl overflow-hidden border border-white/10 bg-black/40 mb-1.5">
-                      <img src={message.mediaData} alt={message.mediaName || "Photo"} className="w-full max-h-72 object-cover rounded-xl hover:scale-[1.01] transition-transform cursor-pointer" />
+                    <div className="rounded-2xl overflow-hidden bg-black/30 mb-1">
+                      <img src={message.mediaData} alt={message.mediaName || "Photo"} className="w-full max-h-72 object-cover rounded-2xl hover:scale-[1.01] transition-transform cursor-pointer" />
                     </div>
                   )}
                   {message.mediaType === "video" && message.mediaData && (
-                    <div className="rounded-xl overflow-hidden border border-white/10 bg-black/40 mb-1.5">
-                      <video src={message.mediaData} controls className="w-full max-h-72 rounded-xl" />
+                    <div className="rounded-2xl overflow-hidden bg-black/30 mb-1">
+                      <video src={message.mediaData} controls className="w-full max-h-72 rounded-2xl" />
                     </div>
                   )}
                   {message.mediaType === "audio" && message.mediaData && (
@@ -363,18 +361,14 @@ export default function MessageBubble({
                       <Download className="w-4 h-4 opacity-80 hover:opacity-100 ml-1" />
                     </a>
                   )}
-                  {/* Message text - moved right with pl-1.5 */}
+                  {/* Clean Native iMessage Typography */}
                   {message.text && (
                     message.effect === "invisible_ink" ? (
                       <InvisibleInk>
-                        <div className="pl-1.5 pr-1 my-0.5">
-                          <p className="whitespace-pre-wrap break-words leading-relaxed text-[13px] sm:text-[13.5px] font-normal text-white">{message.text}</p>
-                        </div>
+                        <p className="whitespace-pre-wrap break-words leading-[1.38] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em]">{message.text}</p>
                       </InvisibleInk>
                     ) : (
-                      <div className="pl-1.5 pr-1 my-0.5">
-                        <p className="whitespace-pre-wrap break-words leading-relaxed text-[13px] sm:text-[13.5px] font-normal text-white">{message.text}</p>
-                      </div>
+                      <p className="whitespace-pre-wrap break-words leading-[1.38] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em]">{message.text}</p>
                     )
                   )}
                 </div>
@@ -382,7 +376,7 @@ export default function MessageBubble({
 
               {/* EFFECT BADGE */}
               {!message.isDeleted && message.effect && message.effect !== "invisible_ink" && (
-                <div className="mt-1.5 mb-0.5 pl-1.5">
+                <div className="mt-1 mb-0.5">
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onTriggerEffect && onTriggerEffect(message.effect); }}
@@ -399,22 +393,11 @@ export default function MessageBubble({
                 </div>
               )}
 
-              {/* TIMESTAMP & TICK STATUS */}
-              <div className={`flex items-center justify-end gap-1.5 mt-1 pt-0.5 text-[9.5px] select-none font-mono ${isMe ? "text-blue-100/80" : "text-slate-400"}`}>
-                {message.isEdited && <span className="opacity-70 italic text-[8px] mr-0.5">(edited)</span>}
-                <span>{timeStr}</span>
-                {isMe && !message.isDeleted && (
-                  <span className={message.isRead ? "text-white font-bold ml-0.5" : "text-blue-200/70 ml-0.5"}>
-                    <CheckCheck className="w-3.5 h-3.5 inline" />
-                  </span>
-                )}
-              </div>
-
               {/* REACTIONS ATTACHED TO BUBBLE */}
               {Object.keys(groupedReactions).length > 0 && (
                 <div
                   onClick={(e) => { e.stopPropagation(); setShowTapback(true); }}
-                  className={`absolute -bottom-3 z-10 cursor-pointer select-none flex items-center gap-0.5 px-2 py-0.5 bg-[#1C1C1E] border border-white/20 rounded-full shadow-lg ${isMe ? "right-2" : "left-2"}`}
+                  className={`absolute -bottom-2.5 z-10 cursor-pointer select-none flex items-center gap-0.5 px-2 py-0.5 bg-[#1C1C1E] border border-white/20 rounded-full shadow-lg ${isMe ? "right-2" : "left-2"}`}
                 >
                   {Object.entries(groupedReactions).map(([emoji, data]) => (
                     <span key={emoji} className="text-xs flex items-center leading-none" title={data.userNames.join(", ")}>
@@ -424,6 +407,26 @@ export default function MessageBubble({
                 </div>
               )}
             </motion.div>
+
+            {/* STATUS & TIMESTAMP BELOW BUBBLE (Native iOS iMessage Style) */}
+            {!message.isDeleted && (
+              <div
+                className={`mt-1 flex items-center gap-1.5 text-[10px] sm:text-[10.5px] text-zinc-400 select-none ${
+                  isMe ? "justify-end mr-1" : "justify-start ml-1"
+                }`}
+              >
+                {message.isEdited && <span className="opacity-75 italic text-[8.5px]">(edited)</span>}
+                <span>{timeStr}</span>
+                {isMe && (
+                  <>
+                    <span className={message.isRead ? "text-zinc-300 font-medium" : "text-zinc-500"}>
+                      {message.isRead ? "Read" : "Delivered"}
+                    </span>
+                    <CheckCheck className={`w-3.5 h-3.5 inline ${message.isRead ? "text-[#007AFF]" : "text-zinc-500"}`} />
+                  </>
+                )}
+              </div>
+            )}
 
             {/* ACTION BAR - below bubble, tap on mobile */}
             <AnimatePresence>
