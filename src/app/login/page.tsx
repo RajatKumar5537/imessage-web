@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, Lock, Mail, User, ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
+import { MessageSquare, Lock, Mail, User, ArrowRight, ShieldCheck, Sparkles, Eye, EyeOff } from "lucide-react";
 import AvatarPicker from "@/components/ui/AvatarPicker";
 import { DEFAULT_AVATAR } from "@/lib/avatars";
 
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState(DEFAULT_AVATAR);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -181,16 +182,29 @@ export default function LoginPage() {
           {/* Password */}
           <div className="login-field">
             <label className="login-label">Password</label>
-            <div className="login-glass-input-wrap">
+            <div className="login-glass-input-wrap relative flex items-center">
               <Lock className="login-field-icon" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="login-input"
+                className="login-input pr-10"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10 cursor-pointer focus:outline-none"
+                title={showPassword ? "Hide password" : "Show password"}
+                tabIndex={-1}
+              >
+                {showPassword ? (
+                  <EyeOff className="w-4 h-4 text-blue-400" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
             </div>
           </div>
 
