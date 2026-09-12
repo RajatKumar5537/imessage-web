@@ -26,6 +26,7 @@ export default function PrimeChatApp() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageProps[]>([]);
   const [replyTo, setReplyTo] = useState<any | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
 
   // Real-time Effects
@@ -371,6 +372,18 @@ export default function PrimeChatApp() {
     } catch (_) {}
   };
 
+  const handleJumpToMessage = (messageId: string) => {
+    if (!messageId) return;
+    const targetEl = document.getElementById(`chat-msg-${messageId}`) || document.getElementById(messageId);
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedMessageId(messageId);
+      setTimeout(() => {
+        setHighlightedMessageId((prev) => (prev === messageId ? null : prev));
+      }, 2000);
+    }
+  };
+
   const handleSetDisappearingTimer = async (hours: number) => {
     if (!activeConversationId) return;
     try {
@@ -682,6 +695,8 @@ export default function PrimeChatApp() {
                           onDelete={handleDeleteMessage}
                           onTogglePin={handleTogglePin}
                           onTriggerEffect={(eff) => setActiveEffect(eff)}
+                          onJumpToMessage={handleJumpToMessage}
+                          isHighlighted={highlightedMessageId === msg._id}
                           showAvatar={activeConversation.type === "group"}
                         />
                       </div>
@@ -782,8 +797,7 @@ export default function PrimeChatApp() {
         onClose={() => setIsSearchModalOpen(false)}
         messages={messages}
         onSelectMessage={(msgId) => {
-          const el = document.getElementById(msgId);
-          el?.scrollIntoView({ behavior: "smooth" });
+          handleJumpToMessage(msgId);
         }}
       />
 

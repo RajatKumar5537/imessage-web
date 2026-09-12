@@ -61,6 +61,8 @@ interface MessageBubbleComponentProps {
   onDelete: (messageId: string) => void;
   onTogglePin: (messageId: string, isPinned: boolean) => void;
   onTriggerEffect?: (effectName: any) => void;
+  onJumpToMessage?: (messageId: string) => void;
+  isHighlighted?: boolean;
   showAvatar?: boolean;
 }
 
@@ -74,6 +76,8 @@ export default function MessageBubble({
   onDelete,
   onTogglePin,
   onTriggerEffect,
+  onJumpToMessage,
+  isHighlighted = false,
   showAvatar = true,
 }: MessageBubbleComponentProps) {
   const [showTapback, setShowTapback] = useState(false);
@@ -132,7 +136,16 @@ export default function MessageBubble({
 
   return (
     <>
-      <div id={`chat-msg-${message._id}`} className={`relative flex flex-col select-none ${isMe ? "items-end pr-2 sm:pr-3 pl-8 sm:pl-16" : "items-start pl-2 sm:pl-3 pr-8 sm:pr-16"}`}>
+      <div
+        id={`chat-msg-${message._id}`}
+        className={`relative flex flex-col select-none transition-all duration-300 ${
+          isMe ? "items-end pr-2 sm:pr-3 pl-8 sm:pl-16" : "items-start pl-2 sm:pl-3 pr-8 sm:pr-16"
+        } ${
+          isHighlighted
+            ? "ring-2 ring-[#007AFF] bg-blue-500/20 rounded-3xl p-1 shadow-[0_0_30px_rgba(0,122,255,0.7)] scale-[1.02]"
+            : ""
+        }`}
+      >
         {message.isPinned && (
           <div className="flex items-center gap-1 text-[10px] text-amber-400/90 mb-1 px-1 font-medium">
             <Pin className="w-3 h-3 fill-current" />
@@ -163,14 +176,21 @@ export default function MessageBubble({
               )}
             </AnimatePresence>
 
-            {/* REPLY QUOTE PREVIEW */}
+            {/* REPLY QUOTE PREVIEW - Click to jump to original message */}
             {message.replyTo && (
               <div
-                className={`mb-1.5 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] max-w-full cursor-pointer ${
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (message.replyTo?.id && onJumpToMessage) {
+                    onJumpToMessage(message.replyTo.id);
+                  }
+                }}
+                className={`mb-1.5 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] max-w-full cursor-pointer hover:opacity-80 active:scale-[0.98] transition-all ${
                   isMe
-                    ? "bg-blue-900/50 border-blue-300/30 text-blue-100"
-                    : "bg-white/[0.06] border-white/10 text-slate-300"
+                    ? "bg-blue-900/50 border-blue-300/30 text-blue-100 hover:bg-blue-900/70"
+                    : "bg-white/[0.06] border-white/10 text-slate-300 hover:bg-white/[0.12]"
                 }`}
+                title="Click to jump to replied message"
               >
                 <Reply className="w-3.5 h-3.5 flex-shrink-0 text-blue-400" />
                 {message.replyTo.senderName && <span className="font-bold">{message.replyTo.senderName}:</span>}
