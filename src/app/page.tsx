@@ -670,7 +670,7 @@ export default function PrimeChatApp() {
                     messages.map((msg) => (
                       <div
                         key={msg._id}
-                        className={`w-full flex-shrink-0 ${(msg.reactions?.length ?? 0) > 0 ? "mb-5 sm:mb-6" : "mb-3 sm:mb-3.5"}`}
+                        className={`w-full flex-shrink-0 ${(msg.reactions?.length ?? 0) > 0 ? "mb-6 sm:mb-7" : "mb-4 sm:mb-4.5"}`}
                       >
                         <MessageBubble
                           message={msg}

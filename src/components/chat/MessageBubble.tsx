@@ -166,13 +166,13 @@ export default function MessageBubble({
             {/* REPLY QUOTE PREVIEW */}
             {message.replyTo && (
               <div
-                className={`mb-1.5 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10.5px] max-w-full cursor-pointer ${
+                className={`mb-1.5 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] max-w-full cursor-pointer ${
                   isMe
-                    ? "bg-teal-950/60 border-teal-500/30 text-teal-300"
+                    ? "bg-blue-900/50 border-blue-300/30 text-blue-100"
                     : "bg-white/[0.06] border-white/10 text-slate-300"
                 }`}
               >
-                <Reply className="w-3 h-3 flex-shrink-0 text-teal-400" />
+                <Reply className="w-3.5 h-3.5 flex-shrink-0 text-blue-400" />
                 {message.replyTo.senderName && <span className="font-bold">{message.replyTo.senderName}:</span>}
                 <span className="truncate">{message.replyTo.text || "[Media Attachment]"}</span>
               </div>
@@ -185,25 +185,25 @@ export default function MessageBubble({
               transition={motionProps.transition}
               onContextMenu={(e) => { e.preventDefault(); setShowTapback(true); }}
               onClick={() => setShowActions((v) => !v)}
-              className={`relative min-w-[125px] max-w-full rounded-2xl p-2.5 sm:p-3 text-xs shadow-md select-none touch-pan-y cursor-pointer ${
+              className={`relative min-w-[130px] max-w-full rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs shadow-md select-none touch-pan-y cursor-pointer ${
                 message.isDeleted
                   ? "bg-white/[0.04] text-slate-400 italic border border-white/5"
                   : isMe
-                  ? "bg-gradient-to-r from-teal-900/85 to-emerald-900/85 border border-teal-500/30 text-teal-50 rounded-tr-xs"
-                  : "bg-[#101026] border border-white/10 text-slate-100 rounded-tl-xs"
+                  ? "bg-[#007AFF] text-white border border-blue-400/20 rounded-tr-xs"
+                  : "bg-[#1C1C1E] border border-white/10 text-slate-100 rounded-tl-xs"
               }`}
             >
-              {/* Sender Name Header */}
+              {/* Sender Name Header - moved right with pl-1.5 */}
               {!message.isDeleted && (
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className={`text-[10px] font-bold ${isMe ? "text-teal-300" : "text-emerald-400"}`}>
+                <div className="flex items-center justify-between gap-2 mb-1 pl-1.5 pr-1">
+                  <span className={`text-[10.5px] font-bold tracking-wide ${isMe ? "text-blue-100" : "text-blue-400"}`}>
                     {message.senderName || "Member"}
                   </span>
                 </div>
               )}
 
               {message.isDeleted ? (
-                <span className="text-slate-400 italic text-xs">This message was deleted</span>
+                <span className="text-slate-400 italic text-xs pl-1.5">This message was deleted</span>
               ) : isEditing ? (
                 <div className="space-y-1.5 my-1" onClick={(e) => e.stopPropagation()}>
                   <input
@@ -211,12 +211,12 @@ export default function MessageBubble({
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                    className="w-full bg-white/10 border border-teal-400/40 rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-teal-400"
+                    className="w-full bg-white/15 border border-white/30 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-white"
                     autoFocus
                   />
                   <div className="flex gap-1.5 justify-end">
-                    <button type="button" onClick={() => setIsEditing(false)} className="px-2 py-0.5 text-[10px] bg-white/10 hover:bg-white/20 rounded text-slate-300 cursor-pointer">Cancel</button>
-                    <button type="button" onClick={handleSaveEdit} className="px-2 py-0.5 text-[10px] bg-teal-600 hover:bg-teal-500 rounded text-white font-bold cursor-pointer">Save</button>
+                    <button type="button" onClick={() => setIsEditing(false)} className="px-2.5 py-1 text-[10px] bg-white/15 hover:bg-white/25 rounded-lg text-white cursor-pointer">Cancel</button>
+                    <button type="button" onClick={handleSaveEdit} className="px-2.5 py-1 text-[10px] bg-white text-blue-600 rounded-lg font-bold cursor-pointer hover:bg-white/90">Save</button>
                   </div>
                 </div>
               ) : (
@@ -244,11 +244,18 @@ export default function MessageBubble({
                       <Download className="w-4 h-4 opacity-80 hover:opacity-100 ml-1" />
                     </a>
                   )}
+                  {/* Message text - moved right with pl-1.5 */}
                   {message.text && (
                     message.effect === "invisible_ink" ? (
-                      <InvisibleInk><p className="whitespace-pre-wrap break-words leading-relaxed text-[12px] sm:text-[13px] text-white my-0.5">{message.text}</p></InvisibleInk>
+                      <InvisibleInk>
+                        <div className="pl-1.5 pr-1 my-0.5">
+                          <p className="whitespace-pre-wrap break-words leading-relaxed text-[13px] sm:text-[13.5px] font-normal text-white">{message.text}</p>
+                        </div>
+                      </InvisibleInk>
                     ) : (
-                      <p className="whitespace-pre-wrap break-words leading-relaxed text-[12px] sm:text-[13px] text-white my-0.5">{message.text}</p>
+                      <div className="pl-1.5 pr-1 my-0.5">
+                        <p className="whitespace-pre-wrap break-words leading-relaxed text-[13px] sm:text-[13.5px] font-normal text-white">{message.text}</p>
+                      </div>
                     )
                   )}
                 </div>
@@ -256,7 +263,7 @@ export default function MessageBubble({
 
               {/* EFFECT BADGE */}
               {!message.isDeleted && message.effect && message.effect !== "invisible_ink" && (
-                <div className="mt-1 mb-0.5">
+                <div className="mt-1.5 mb-0.5 pl-1.5">
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onTriggerEffect && onTriggerEffect(message.effect); }}
@@ -274,11 +281,11 @@ export default function MessageBubble({
               )}
 
               {/* TIMESTAMP & TICK STATUS */}
-              <div className="flex items-center justify-end gap-1.5 mt-1 pt-0.5 text-[9.5px] select-none font-mono text-slate-400">
+              <div className={`flex items-center justify-end gap-1.5 mt-1 pt-0.5 text-[9.5px] select-none font-mono ${isMe ? "text-blue-100/80" : "text-slate-400"}`}>
                 {message.isEdited && <span className="opacity-70 italic text-[8px] mr-0.5">(edited)</span>}
                 <span>{timeStr}</span>
                 {isMe && !message.isDeleted && (
-                  <span className={message.isRead ? "text-teal-400 font-bold ml-0.5" : "text-slate-500 ml-0.5"}>
+                  <span className={message.isRead ? "text-white font-bold ml-0.5" : "text-blue-200/70 ml-0.5"}>
                     <CheckCheck className="w-3.5 h-3.5 inline" />
                   </span>
                 )}

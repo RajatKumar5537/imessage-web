@@ -21,21 +21,29 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
+    // High-DPI Retina Support for crystal-clear rendering on iPhones & mobile
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    let width = window.innerWidth;
+    let height = window.innerHeight;
 
-    const handleResize = () => {
-      if (!canvas) return;
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+    const updateCanvasSize = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
-    window.addEventListener("resize", handleResize);
+
+    updateCanvasSize();
+    window.addEventListener("resize", updateCanvasSize);
 
     let animationFrameId: number;
     let isRunning = true;
     const timeoutIds: any[] = [];
 
-    // Play initial sound
+    // Play sound
     if (effect === "fireworks") {
       soundEngine.playFireworksCrackle();
     } else {
@@ -43,10 +51,10 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     }
 
     /* -------------------------------------------------------------
-       1. FIREWORKS PARTICLE ENGINE (Precise 3.5s sequence)
+       1. FIREWORKS PARTICLE ENGINE (Crisp bursts, zero fuzzy blur)
        ------------------------------------------------------------- */
     if (effect === "fireworks") {
-      const colors = ["#FF416C", "#FF4B2B", "#00F2FE", "#4FACFE", "#FEE140", "#FA709A", "#30cfd0", "#ffffff", "#38ef7d"];
+      const colors = ["#FF3B5C", "#FF9500", "#FFD60A", "#30D158", "#0A84FF", "#BF5AF2", "#64D2FF", "#FFFFFF"];
       const particles: Array<{
         x: number;
         y: number;
@@ -71,14 +79,14 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
 
       const createRocket = () => {
         if (!isRunning) return;
-        const x = width * 0.2 + Math.random() * (width * 0.6);
-        const targetY = height * 0.15 + Math.random() * (height * 0.45);
+        const x = width * 0.15 + Math.random() * (width * 0.7);
+        const targetY = height * 0.15 + Math.random() * (height * 0.35);
         rockets.push({
           x,
           y: height,
           targetY,
-          vx: (Math.random() - 0.5) * 2,
-          vy: -(9 + Math.random() * 5),
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: -(10 + Math.random() * 4),
           color: colors[Math.floor(Math.random() * colors.length)],
         });
       };
@@ -86,10 +94,10 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       const explode = (x: number, y: number, color: string) => {
         if (!isRunning) return;
         soundEngine.playFireworksCrackle();
-        const count = 90 + Math.floor(Math.random() * 50);
+        const count = 75 + Math.floor(Math.random() * 45);
         for (let i = 0; i < count; i++) {
           const angle = Math.random() * Math.PI * 2;
-          const speed = Math.random() * 6 + 2;
+          const speed = Math.random() * 5.5 + 1.5;
           particles.push({
             x,
             y,
@@ -97,40 +105,36 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
             vy: Math.sin(angle) * speed,
             alpha: 1,
             color: Math.random() > 0.3 ? color : colors[Math.floor(Math.random() * colors.length)],
-            size: Math.random() * 3 + 1.5,
+            size: Math.random() * 2.2 + 1.2,
             decay: Math.random() * 0.02 + 0.012,
-            friction: 0.95,
-            gravity: 0.09,
+            friction: 0.96,
+            gravity: 0.08,
           });
         }
       };
 
-      // Launch 3 controlled rocket bursts
       createRocket();
-      timeoutIds.push(setTimeout(createRocket, 300));
-      timeoutIds.push(setTimeout(createRocket, 700));
+      timeoutIds.push(setTimeout(createRocket, 280));
+      timeoutIds.push(setTimeout(createRocket, 650));
 
       const render = () => {
         if (!isRunning || !ctx) return;
         ctx.clearRect(0, 0, width, height);
 
-        // Update & draw rockets
+        // Rockets
         for (let i = rockets.length - 1; i >= 0; i--) {
           const r = rockets[i];
           r.x += r.vx;
           r.y += r.vy;
 
           ctx.beginPath();
-          ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
+          ctx.arc(r.x, r.y, 2.5, 0, Math.PI * 2);
           ctx.fillStyle = r.color;
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = r.color;
           ctx.fill();
 
-          // Spark trail
           ctx.beginPath();
-          ctx.arc(r.x + (Math.random() - 0.5) * 4, r.y + 4, 1.5, 0, Math.PI * 2);
-          ctx.fillStyle = "#ffffff";
+          ctx.arc(r.x + (Math.random() - 0.5) * 2, r.y + 3, 1.2, 0, Math.PI * 2);
+          ctx.fillStyle = "#FFFFFF";
           ctx.fill();
 
           if (r.y <= r.targetY || r.vy >= 0) {
@@ -139,7 +143,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
           }
         }
 
-        // Update & draw explosion particles
+        // Particles
         for (let i = particles.length - 1; i >= 0; i--) {
           const p = particles[i];
           p.vx *= p.friction;
@@ -156,11 +160,9 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
 
           ctx.save();
           ctx.globalAlpha = Math.max(0, p.alpha);
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = p.color;
-          ctx.fillStyle = p.color;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
           ctx.fill();
           ctx.restore();
         }
@@ -174,20 +176,88 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     }
 
     /* -------------------------------------------------------------
-       2. BALLOONS ENGINE
+       2. BALLOONS ENGINE (Apple iMessage Style: Glossy, sharp, realistic)
        ------------------------------------------------------------- */
     else if (effect === "balloons") {
-      const balloonColors = ["#FF3B30", "#FF9500", "#FFCC00", "#34C759", "#007AFF", "#AF52DE", "#FF2D55"];
-      const balloons = Array.from({ length: 22 }).map(() => ({
-        x: Math.random() * width,
-        y: height + Math.random() * 300,
-        vx: (Math.random() - 0.5) * 1.5,
-        vy: -(Math.random() * 3 + 2.5),
-        color: balloonColors[Math.floor(Math.random() * balloonColors.length)],
-        radiusX: Math.random() * 14 + 20,
-        radiusY: Math.random() * 18 + 26,
-        wiggleOffset: Math.random() * 100,
-      }));
+      const balloonDefs = [
+        { color: "#FF3B30", highlight: "#FF8E85" },
+        { color: "#FF9500", highlight: "#FFC266" },
+        { color: "#FFCC00", highlight: "#FFE57F" },
+        { color: "#34C759", highlight: "#8CE6A3" },
+        { color: "#007AFF", highlight: "#70B4FF" },
+        { color: "#AF52DE", highlight: "#D89EFA" },
+        { color: "#FF2D55", highlight: "#FF8AA1" },
+        { color: "#5856D6", highlight: "#9D9BF0" },
+      ];
+
+      const balloonCount = Math.max(14, Math.min(26, Math.floor(width / 32)));
+      const balloons = Array.from({ length: balloonCount }).map(() => {
+        const def = balloonDefs[Math.floor(Math.random() * balloonDefs.length)];
+        return {
+          x: Math.random() * width,
+          y: height + Math.random() * (height * 0.8),
+          vx: (Math.random() - 0.5) * 1.2,
+          vy: -(Math.random() * 2.8 + 2.2),
+          color: def.color,
+          highlight: def.highlight,
+          radiusX: Math.random() * 10 + 22,
+          radiusY: Math.random() * 12 + 28,
+          swayPhase: Math.random() * Math.PI * 2,
+          swaySpeed: Math.random() * 0.03 + 0.02,
+        };
+      });
+
+      const drawBalloon = (
+        x: number,
+        y: number,
+        rx: number,
+        ry: number,
+        color: string,
+        highlight: string,
+        sway: number
+      ) => {
+        ctx.save();
+
+        // 1. Crisp balloon string
+        ctx.beginPath();
+        ctx.moveTo(x, y + ry);
+        ctx.quadraticCurveTo(x + sway * 12, y + ry + 30, x - sway * 6, y + ry + 60);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // 2. Balloon body with 3D radial gradient
+        ctx.beginPath();
+        ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+        const grad = ctx.createRadialGradient(x - rx * 0.32, y - ry * 0.35, rx * 0.08, x, y, ry * 1.1);
+        grad.addColorStop(0, highlight);
+        grad.addColorStop(0.65, color);
+        grad.addColorStop(1, "rgba(0, 0, 0, 0.4)");
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Clean subtle edge definition
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // 3. Knot at base of balloon
+        ctx.beginPath();
+        ctx.moveTo(x - 3, y + ry);
+        ctx.lineTo(x + 3, y + ry);
+        ctx.lineTo(x, y + ry + 4);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+
+        // 4. Gloss Specular Reflection (Crisp crescent shine)
+        ctx.beginPath();
+        ctx.ellipse(x - rx * 0.35, y - ry * 0.38, rx * 0.22, ry * 0.14, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+        ctx.fill();
+
+        ctx.restore();
+      };
 
       const render = () => {
         if (!isRunning || !ctx) return;
@@ -195,32 +265,11 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
 
         for (const b of balloons) {
           b.y += b.vy;
-          b.x += b.vx + Math.sin((b.y + b.wiggleOffset) * 0.02) * 0.8;
+          b.swayPhase += b.swaySpeed;
+          const sway = Math.sin(b.swayPhase);
+          b.x += b.vx + sway * 0.7;
 
-          // String
-          ctx.beginPath();
-          ctx.moveTo(b.x, b.y + b.radiusY);
-          ctx.quadraticCurveTo(b.x + 8, b.y + b.radiusY + 25, b.x, b.y + b.radiusY + 50);
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-          ctx.lineWidth = 1.2;
-          ctx.stroke();
-
-          // Balloon
-          ctx.save();
-          ctx.beginPath();
-          ctx.ellipse(b.x, b.y, b.radiusX, b.radiusY, 0, 0, Math.PI * 2);
-          ctx.fillStyle = b.color;
-          ctx.globalAlpha = 0.88;
-          ctx.shadowBlur = 12;
-          ctx.shadowColor = b.color;
-          ctx.fill();
-
-          // Highlight
-          ctx.beginPath();
-          ctx.ellipse(b.x - b.radiusX * 0.35, b.y - b.radiusY * 0.35, b.radiusX * 0.25, b.radiusY * 0.2, -Math.PI / 4, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(255,255,255,0.6)";
-          ctx.fill();
-          ctx.restore();
+          drawBalloon(b.x, b.y, b.radiusX, b.radiusY, b.color, b.highlight, sway);
         }
 
         if (isRunning) {
@@ -232,19 +281,20 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     }
 
     /* -------------------------------------------------------------
-       3. CONFETTI ENGINE
+       3. CONFETTI ENGINE (Vibrant celebratory flutter)
        ------------------------------------------------------------- */
     else if (effect === "confetti") {
-      const confettiColors = ["#FFD700", "#FF69B4", "#00FFFF", "#7FFF00", "#FF4500", "#9400D3", "#FFFFFF"];
-      const pieces = Array.from({ length: 120 }).map(() => ({
+      const confettiColors = ["#FFD700", "#FF2D55", "#00F2FE", "#30D158", "#FF9500", "#BF5AF2", "#FFFFFF"];
+      const pieceCount = Math.max(60, Math.min(130, Math.floor(width / 7)));
+      const pieces = Array.from({ length: pieceCount }).map(() => ({
         x: Math.random() * width,
-        y: -Math.random() * height * 0.5,
-        vx: (Math.random() - 0.5) * 4,
-        vy: Math.random() * 4 + 3,
-        size: Math.random() * 8 + 6,
+        y: -Math.random() * (height * 0.6),
+        vx: (Math.random() - 0.5) * 3,
+        vy: Math.random() * 3.5 + 2.8,
+        size: Math.random() * 7 + 6,
         color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
         rotation: Math.random() * 360,
-        rotationSpeed: (Math.random() - 0.5) * 10,
+        rotationSpeed: (Math.random() - 0.5) * 8,
       }));
 
       const render = () => {
@@ -252,7 +302,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
         ctx.clearRect(0, 0, width, height);
 
         for (const p of pieces) {
-          p.x += p.vx + Math.sin(p.y * 0.01) * 1.5;
+          p.x += p.vx + Math.sin(p.y * 0.015) * 1.5;
           p.y += p.vy;
           p.rotation += p.rotationSpeed;
 
@@ -273,40 +323,97 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     }
 
     /* -------------------------------------------------------------
-       4. LOVE / HEARTS ENGINE
+       4. LOVE / HEARTS ENGINE (Apple iMessage Style: 3D Glossy, razor sharp)
        ------------------------------------------------------------- */
     else if (effect === "love") {
-      const hearts = Array.from({ length: 20 }).map(() => ({
-        x: width * 0.2 + Math.random() * (width * 0.6),
-        y: height + Math.random() * 200,
-        vx: (Math.random() - 0.5) * 2,
-        vy: -(Math.random() * 3 + 2),
-        scale: Math.random() * 0.8 + 0.6,
+      let time = 0;
+
+      // Companion floating hearts
+      const heartCount = Math.max(10, Math.min(22, Math.floor(width / 38)));
+      const hearts = Array.from({ length: heartCount }).map(() => ({
+        x: Math.random() * width,
+        y: height + Math.random() * (height * 0.8),
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: -(Math.random() * 2.5 + 2.0),
+        scale: Math.random() * 0.5 + 0.45,
+        alpha: Math.random() * 0.4 + 0.6,
+        swayPhase: Math.random() * Math.PI * 2,
       }));
 
-      const drawHeart = (cx: number, cy: number, scale: number) => {
+      // Hero Heart (centered, inflates and pulses like iOS iMessage Send with Love)
+      const hero = {
+        x: width / 2,
+        y: height * 0.85,
+        scale: 0.2,
+        targetScale: Math.min(width, height) > 500 ? 1.5 : 1.15,
+        vy: -2.2,
+        alpha: 1,
+      };
+
+      const drawHeart = (cx: number, cy: number, scale: number, alpha: number) => {
         ctx.save();
         ctx.translate(cx, cy);
         ctx.scale(scale, scale);
+        ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+        // 1. Precise 3D Heart Path
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.bezierCurveTo(-20, -25, -45, 10, 0, 45);
-        ctx.bezierCurveTo(45, 10, 20, -25, 0, 0);
-        ctx.fillStyle = "#FF2D55";
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "#FF2D55";
+        ctx.moveTo(0, 15);
+        ctx.bezierCurveTo(-2, 10, -38, -20, -38, -48);
+        ctx.bezierCurveTo(-38, -74, -10, -82, 0, -62);
+        ctx.bezierCurveTo(10, -82, 38, -74, 38, -48);
+        ctx.bezierCurveTo(38, -20, 2, 10, 0, 15);
+        ctx.closePath();
+
+        // 2. Rich Deep Ruby Gradient
+        const grad = ctx.createLinearGradient(-30, -80, 30, 20);
+        grad.addColorStop(0, "#FF375F");
+        grad.addColorStop(0.55, "#E6002B");
+        grad.addColorStop(1, "#8A0014");
+        ctx.fillStyle = grad;
         ctx.fill();
+
+        // 3. Crisp Inner Contour Line
+        ctx.strokeStyle = "rgba(255, 120, 150, 0.5)";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        // 4. Specular Curved Gloss Highlight (Left lobe)
+        ctx.beginPath();
+        ctx.ellipse(-16, -58, 11, 5, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
+        ctx.fill();
+
+        // 5. Subtle secondary highlight (Right lobe)
+        ctx.beginPath();
+        ctx.ellipse(18, -55, 6, 3, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+        ctx.fill();
+
         ctx.restore();
       };
 
       const render = () => {
         if (!isRunning || !ctx) return;
         ctx.clearRect(0, 0, width, height);
+        time += 0.05;
 
+        // Draw companion floating hearts
         for (const h of hearts) {
           h.y += h.vy;
-          h.x += h.vx + Math.sin(h.y * 0.015) * 1.2;
-          drawHeart(h.x, h.y, h.scale);
+          h.swayPhase += 0.03;
+          h.x += h.vx + Math.sin(h.swayPhase) * 0.9;
+          drawHeart(h.x, h.y, h.scale, h.alpha);
+        }
+
+        // Draw & animate Hero Heart with heartbeat pulsation
+        if (hero.y > -150) {
+          hero.y += hero.vy;
+          if (hero.scale < hero.targetScale) {
+            hero.scale += (hero.targetScale - hero.scale) * 0.06;
+          }
+          const pulse = hero.scale * (1 + Math.sin(time * 3) * 0.06);
+          drawHeart(hero.x, hero.y, pulse, hero.alpha);
         }
 
         if (isRunning) {
@@ -318,7 +425,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     }
 
     /* -------------------------------------------------------------
-       5. LASERS ENGINE
+       5. LASERS ENGINE (Sharp modern beams)
        ------------------------------------------------------------- */
     else if (effect === "lasers") {
       let time = 0;
@@ -330,18 +437,16 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
         const beams = 8;
         for (let i = 0; i < beams; i++) {
           const originX = (i / beams) * width + width / (beams * 2);
-          const targetX = width / 2 + Math.sin(time + i) * (width * 0.6);
+          const targetX = width / 2 + Math.sin(time + i) * (width * 0.55);
           const targetY = height;
 
           ctx.beginPath();
           ctx.moveTo(originX, 0);
           ctx.lineTo(targetX, targetY);
 
-          const hue = (time * 50 + i * 40) % 360;
+          const hue = (time * 55 + i * 42) % 360;
           ctx.strokeStyle = `hsl(${hue}, 100%, 65%)`;
-          ctx.lineWidth = 4 + Math.sin(time * 2 + i) * 2;
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+          ctx.lineWidth = 3 + Math.sin(time * 2 + i) * 1.5;
           ctx.stroke();
         }
 
@@ -354,60 +459,48 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     }
 
     /* -------------------------------------------------------------
-       6. SHOOTING STAR ENGINE
+       6. SHOOTING STAR ENGINE (Crisp sparkling trail)
        ------------------------------------------------------------- */
     else if (effect === "shooting_star") {
-      let angle = 0; // direction angle in radians
       let star = {
-        x: width * 0.05 + Math.random() * width * 0.3,
-        y: height * 0.05 + Math.random() * height * 0.2,
-        vx: 14 + Math.random() * 8,
-        vy: 6 + Math.random() * 6,
+        x: width * 0.05 + Math.random() * width * 0.2,
+        y: height * 0.05 + Math.random() * height * 0.15,
+        vx: 13 + Math.random() * 6,
+        vy: 5 + Math.random() * 4,
         trail: [] as { x: number; y: number }[],
-        alpha: 1,
       };
 
       const render = () => {
         if (!isRunning || !ctx) return;
-        // Clear properly each frame - no accumulation
         ctx.clearRect(0, 0, width, height);
 
         star.x += star.vx;
         star.y += star.vy;
         star.trail.push({ x: star.x, y: star.y });
-        if (star.trail.length > 28) star.trail.shift();
+        if (star.trail.length > 25) star.trail.shift();
 
-        // Draw glowing trail
+        // Trail
         for (let i = 0; i < star.trail.length; i++) {
           const t = star.trail[i];
           const progress = i / star.trail.length;
-          const radius = progress * 5;
           ctx.save();
-          ctx.globalAlpha = progress * 0.9;
+          ctx.globalAlpha = progress * 0.85;
           ctx.beginPath();
-          ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255, 240, 120, 1)`;
-          ctx.shadowBlur = 18;
-          ctx.shadowColor = "rgba(255, 220, 80, 0.9)";
+          ctx.arc(t.x, t.y, progress * 4, 0, Math.PI * 2);
+          ctx.fillStyle = "#FFD60A";
           ctx.fill();
           ctx.restore();
         }
 
-        // Head glow
-        ctx.save();
-        ctx.globalAlpha = 1;
+        // Head
         ctx.beginPath();
-        ctx.arc(star.x, star.y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = "#fffde7";
-        ctx.shadowBlur = 30;
-        ctx.shadowColor = "rgba(255, 240, 100, 1)";
+        ctx.arc(star.x, star.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = "#FFFFFF";
         ctx.fill();
-        ctx.restore();
 
-        // Reset if off screen
-        if (star.x > width + 100 || star.y > height + 100) {
+        if (star.x > width + 80 || star.y > height + 80) {
           star.x = width * 0.05;
-          star.y = Math.random() * height * 0.3;
+          star.y = Math.random() * height * 0.25;
           star.trail = [];
         }
 
@@ -419,7 +512,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       render();
     }
 
-    // Auto dismiss effect after 30 seconds (no click listener - that fires on Send button)
+    // Auto dismiss after 30 seconds
     const handleDismiss = () => {
       isRunning = false;
       clearTimeout(timer);
@@ -445,7 +538,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       timeoutIds.forEach((id) => clearTimeout(id));
       cancelAnimationFrame(animationFrameId);
       if (ctx) ctx.clearRect(0, 0, width, height);
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("resize", updateCanvasSize);
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [effect]);

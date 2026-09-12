@@ -437,9 +437,9 @@ export default function MessageInputBar({
         />
       ) : (
         /* 6. MAIN INPUT ROW - Apple iMessage Style */
-        <form onSubmit={handleSend} className="flex items-center gap-2">
+        <form onSubmit={handleSend} className="flex items-center gap-1.5 sm:gap-2">
           {/* Action Drawer Expand (+) Button */}
-          <div className="relative">
+          <div className="relative flex-shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -450,7 +450,7 @@ export default function MessageInputBar({
               className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 touch-manipulation ${
                 isDrawerOpen
                   ? "text-[#007AFF] bg-blue-500/20 border border-[#007AFF]/40"
-                  : "text-slate-400 hover:text-white hover:bg-white/10"
+                  : "text-zinc-400 hover:text-white bg-white/[0.07] hover:bg-white/[0.12] border border-white/10"
               }`}
               title="Add Media, Photos, Files & Voice Memo"
             >
@@ -478,10 +478,10 @@ export default function MessageInputBar({
               setIsDrawerOpen(false);
               setShowEmojiPicker(false);
             }}
-            className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 touch-manipulation ${
+            className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 touch-manipulation flex-shrink-0 ${
               showEffectsPicker || selectedEffect
                 ? "text-amber-300 bg-amber-500/25 border border-amber-400/50 shadow-md shadow-amber-500/20 scale-105"
-                : "text-slate-400 hover:text-amber-300 hover:bg-white/10"
+                : "text-zinc-400 hover:text-amber-300 bg-white/[0.07] hover:bg-white/[0.12] border border-white/10"
             }`}
             title="Screen & Bubble Effects (Fireworks, Balloons, Lasers, Hearts...)"
           >
@@ -496,36 +496,38 @@ export default function MessageInputBar({
               setIsDrawerOpen(false);
               setShowEffectsPicker(false);
             }}
-            className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 touch-manipulation ${
+            className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 touch-manipulation flex-shrink-0 ${
               showEmojiPicker
-                ? "text-[#007AFF] bg-blue-500/20"
-                : "text-slate-400 hover:text-white hover:bg-white/10"
+                ? "text-[#007AFF] bg-blue-500/20 border border-blue-500/30"
+                : "text-zinc-400 hover:text-white bg-white/[0.07] hover:bg-white/[0.12] border border-white/10"
             }`}
             title="Insert Emoji"
           >
             <Smile className="w-5 h-5 stroke-[2]" />
           </button>
 
-          {/* MAIN INPUT PILL */}
-          <input
-            ref={inputRef}
-            type="text"
-            value={text}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder={`iMessage (${partnerName})...`}
-            className="flex-1 bg-white/[0.08] hover:bg-white/[0.1] focus:bg-white/[0.12] border border-white/15 focus:border-[#007AFF] rounded-full px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm text-white placeholder-slate-400 outline-none transition-all font-normal shadow-inner"
-          />
+          {/* MAIN APPLE iMESSAGE CAPSULE PILL */}
+          <div className="flex-1 flex items-center bg-[#1C1C1E] border border-white/15 focus-within:border-[#007AFF] rounded-full pl-4 pr-1.5 py-1 transition-all shadow-inner min-h-[42px]">
+            <input
+              ref={inputRef}
+              type="text"
+              value={text}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              placeholder={`iMessage (${partnerName})...`}
+              className="flex-1 bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-xs sm:text-sm text-white placeholder:text-zinc-500 py-1.5 px-0 min-w-0 font-normal"
+            />
 
-          {/* iOS Round ArrowUp Send Button */}
-          <button
-            type="submit"
-            disabled={!text.trim()}
-            className="w-9 h-9 rounded-full bg-[#007AFF] hover:bg-[#0071EB] disabled:opacity-30 text-white transition-all cursor-pointer shadow-lg shadow-[#007AFF]/35 flex-shrink-0 active:scale-95 touch-manipulation flex items-center justify-center"
-            title="Send iMessage"
-          >
-            <ArrowUp className="w-5 h-5 stroke-[2.5]" />
-          </button>
+            {/* iOS Round ArrowUp Send Button Inside Capsule */}
+            <button
+              type="submit"
+              disabled={!text.trim()}
+              className="w-8 h-8 rounded-full bg-[#007AFF] hover:bg-[#0071EB] disabled:bg-zinc-700/60 disabled:text-zinc-500 disabled:opacity-40 text-white transition-all cursor-pointer shadow-md shadow-[#007AFF]/25 flex-shrink-0 active:scale-95 touch-manipulation flex items-center justify-center ml-1.5"
+              title="Send iMessage"
+            >
+              <ArrowUp className="w-4 h-4 sm:w-4.5 sm:h-4.5 stroke-[2.5]" />
+            </button>
+          </div>
         </form>
       )}
     </footer>
