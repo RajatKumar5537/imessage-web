@@ -19,6 +19,10 @@ const UserSchema = new Schema(
       type: String,
       required: [true, "Password is required"],
     },
+    securityPin: {
+      type: String,
+      default: "",
+    },
     avatar: {
       type: String,
       default: "",

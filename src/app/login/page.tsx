@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, Lock, Mail, User, ArrowRight, ShieldCheck, Sparkles, Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { MessageSquare, Lock, Mail, User, ArrowRight, ShieldCheck, Sparkles, Eye, EyeOff, KeyRound } from "lucide-react";
 import AvatarPicker from "@/components/ui/AvatarPicker";
 import { DEFAULT_AVATAR } from "@/lib/avatars";
 
@@ -13,7 +14,9 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [securityPin, setSecurityPin] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showPin, setShowPin] = useState(false);
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState(DEFAULT_AVATAR);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,6 +35,7 @@ export default function LoginPage() {
             name: name.trim(),
             email: email.toLowerCase().trim(),
             password,
+            securityPin: securityPin.trim(),
             avatar: selectedAvatarUrl,
           }),
         });
@@ -181,7 +185,17 @@ export default function LoginPage() {
 
           {/* Password */}
           <div className="login-field">
-            <label className="login-label">Password</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="login-label !mb-0">Password</label>
+              {!isRegister && (
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              )}
+            </div>
             <div className="login-glass-input-wrap relative flex items-center">
               <Lock className="login-field-icon" />
               <input
@@ -207,6 +221,39 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+
+          {/* Optional Security PIN during Registration */}
+          {isRegister && (
+            <div className="login-field">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="login-label !mb-0">Security PIN (Optional)</label>
+                <span className="text-[11px] text-neutral-400">4-6 digits for recovery</span>
+              </div>
+              <div className="login-glass-input-wrap relative flex items-center">
+                <KeyRound className="login-field-icon" />
+                <input
+                  type={showPin ? "text" : "password"}
+                  maxLength={6}
+                  value={securityPin}
+                  onChange={(e) => setSecurityPin(e.target.value)}
+                  placeholder="e.g. 123456"
+                  className="login-input pr-10 font-mono tracking-widest"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPin(!showPin)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10 cursor-pointer focus:outline-none"
+                  tabIndex={-1}
+                >
+                  {showPin ? (
+                    <EyeOff className="w-4 h-4 text-blue-400" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Submit Button */}
           <button type="submit" disabled={loading} className="login-action-btn">

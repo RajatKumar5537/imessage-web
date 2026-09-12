@@ -7,7 +7,7 @@ import { getFallbackAvatar } from "@/lib/avatars";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, avatar } = await req.json();
+    const { name, email, password, avatar, securityPin } = await req.json();
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Name, email, and password are required" }, { status: 400 });
@@ -26,11 +26,16 @@ export async function POST(req: Request) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    let hashedPin = "";
+    if (securityPin && String(securityPin).trim().length >= 4) {
+      hashedPin = await bcrypt.hash(String(securityPin).trim(), 10);
+    }
 
     const newUser = await User.create({
       name: name.trim(),
       email: cleanEmail,
       password: hashedPassword,
+      securityPin: hashedPin,
       avatar: avatar || getFallbackAvatar(name.trim(), "user"),
       statusMessage: "Hey there! I am using iMessage 🚀",
       isOnline: true,
