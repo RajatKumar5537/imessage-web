@@ -66,6 +66,7 @@ export default function PrimeChatApp() {
 
   // Scroll ref & Effect tracking
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const prevMessagesCountRef = useRef(0);
   const prevTotalUnreadRef = useRef<number | null>(null);
   const playedEffectIdsRef = useRef<Set<string>>(new Set());
@@ -118,22 +119,23 @@ export default function PrimeChatApp() {
   };
 
   // 3. Fetch Messages for Active Conversation
-  const fetchMessages = async (convId: string, isInitial = false) => {
+  const fetchMessages = async (convId: string, isInitial = false, forceScroll = false) => {
     if (!convId) return;
     try {
       const res = await fetch(`/api/chat/messages?conversationId=${convId}`);
       if (res.ok) {
         const data: MessageProps[] = await res.json();
+        const hasNewMessages = data.length > prevMessagesCountRef.current;
+        const lastMsg = data.length > 0 ? data[data.length - 1] : null;
 
         if (isInitial) {
           // Mark all existing messages as already played so they don't replay on poll
           data.forEach((m) => {
             if (m._id) playedEffectIdsRef.current.add(m._id);
           });
-        } else if (data.length > prevMessagesCountRef.current) {
+        } else if (hasNewMessages) {
           // Check if a brand-new message arrived with an effect
-          const lastMsg = data[data.length - 1];
-          if (!lastMsg.isMe && lastMsg.effect && lastMsg.effect !== "invisible_ink") {
+          if (lastMsg && !lastMsg.isMe && lastMsg.effect && lastMsg.effect !== "invisible_ink") {
             if (!playedEffectIdsRef.current.has(lastMsg._id)) {
               playedEffectIdsRef.current.add(lastMsg._id);
               soundEngine.playReceived();
@@ -172,10 +174,26 @@ export default function PrimeChatApp() {
           );
         }
 
-        // Scroll to bottom on new message
-        setTimeout(() => {
-          chatBottomRef.current?.scrollIntoView({ behavior: isInitial ? "auto" : "smooth" });
-        }, 50);
+        // Scroll logic:
+        // - Always scroll on initial load or if explicitly forced (e.g. after sending)
+        // - If new messages arrive, only scroll if the user is already near the bottom or if the user sent it
+        // - DO NOT scroll during regular 2-second background poll when user is reading older messages
+        if (isInitial || forceScroll) {
+          setTimeout(() => {
+            chatBottomRef.current?.scrollIntoView({ behavior: isInitial ? "auto" : "smooth" });
+          }, 60);
+        } else if (hasNewMessages) {
+          const container = chatContainerRef.current;
+          const isNearBottom = container
+            ? container.scrollHeight - container.scrollTop - container.clientHeight < 160
+            : true;
+
+          if (isNearBottom || lastMsg?.isMe) {
+            setTimeout(() => {
+              chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, 60);
+          }
+        }
       }
     } catch (err) {
       console.error("Error fetching messages:", err);
@@ -278,7 +296,7 @@ export default function PrimeChatApp() {
       });
 
       if (res.ok) {
-        fetchMessages(activeConversationId);
+        fetchMessages(activeConversationId, false, true);
         fetchConversations();
         setReplyTo(null);
       }
@@ -627,8 +645,11 @@ export default function PrimeChatApp() {
               />
 
               {/* MESSAGE FEED */}
-              <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-3 sm:py-4 relative overscroll-contain">
-                <div className="max-w-3xl mx-auto w-full flex flex-col justify-start min-h-full pb-8 sm:pb-12 pt-2">
+              <div
+                ref={chatContainerRef}
+                className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4 relative overscroll-contain"
+              >
+                <div className="w-full flex flex-col justify-start min-h-full pb-8 sm:pb-12 pt-2">
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center min-h-[160px] my-auto text-center space-y-2.5 p-6 border border-dashed border-white/10 rounded-3xl bg-white/[0.03] backdrop-blur-md">
                       <div className="p-3 rounded-2xl bg-blue-500/20 text-[#007AFF] border border-blue-400/30 shadow-inner">

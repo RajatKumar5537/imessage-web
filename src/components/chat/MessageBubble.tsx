@@ -132,7 +132,7 @@ export default function MessageBubble({
 
   return (
     <>
-      <div className={`relative flex flex-col select-none ${isMe ? "items-end pr-1 sm:pr-2 pl-6 sm:pl-16" : "items-start pl-1 sm:pl-2 pr-6 sm:pr-16"}`}>
+      <div id={`chat-msg-${message._id}`} className={`relative flex flex-col select-none ${isMe ? "items-end pr-2 sm:pr-3 pl-8 sm:pl-16" : "items-start pl-2 sm:pl-3 pr-8 sm:pr-16"}`}>
         {message.isPinned && (
           <div className="flex items-center gap-1 text-[10px] text-amber-400/90 mb-1 px-1 font-medium">
             <Pin className="w-3 h-3 fill-current" />
@@ -140,7 +140,7 @@ export default function MessageBubble({
           </div>
         )}
 
-        <div className={`flex items-end gap-2 max-w-[85%] sm:max-w-md md:max-w-lg lg:max-w-xl ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+        <div className={`flex items-end gap-2 max-w-[88%] sm:max-w-md md:max-w-lg lg:max-w-xl ${isMe ? "flex-row-reverse" : "flex-row"}`}>
           {!isMe && showAvatar && (
             <img
               src={message.senderAvatar || getFallbackAvatar(message.senderName, "user")}
@@ -166,13 +166,13 @@ export default function MessageBubble({
             {/* REPLY QUOTE PREVIEW */}
             {message.replyTo && (
               <div
-                className={`mb-1.5 flex items-center gap-1.5 px-3 py-1 rounded-xl border text-[11px] max-w-full cursor-pointer ${
+                className={`mb-1.5 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10.5px] max-w-full cursor-pointer ${
                   isMe
-                    ? "bg-blue-900/40 border-blue-400/30 text-blue-100"
+                    ? "bg-teal-950/60 border-teal-500/30 text-teal-300"
                     : "bg-white/[0.06] border-white/10 text-slate-300"
                 }`}
               >
-                <Reply className="w-3 h-3 flex-shrink-0 text-blue-400" />
+                <Reply className="w-3 h-3 flex-shrink-0 text-teal-400" />
                 {message.replyTo.senderName && <span className="font-bold">{message.replyTo.senderName}:</span>}
                 <span className="truncate">{message.replyTo.text || "[Media Attachment]"}</span>
               </div>
@@ -185,18 +185,18 @@ export default function MessageBubble({
               transition={motionProps.transition}
               onContextMenu={(e) => { e.preventDefault(); setShowTapback(true); }}
               onClick={() => setShowActions((v) => !v)}
-              className={`relative min-w-[115px] max-w-full rounded-2xl p-2.5 sm:p-3 text-xs shadow-md select-none touch-pan-y cursor-pointer ${
+              className={`relative min-w-[125px] max-w-full rounded-2xl p-2.5 sm:p-3 text-xs shadow-md select-none touch-pan-y cursor-pointer ${
                 message.isDeleted
                   ? "bg-white/[0.04] text-slate-400 italic border border-white/5"
                   : isMe
-                  ? "bg-[#007AFF] text-white rounded-tr-xs"
-                  : "bg-[#26252A] border border-white/10 text-slate-100 rounded-tl-xs"
+                  ? "bg-gradient-to-r from-teal-900/85 to-emerald-900/85 border border-teal-500/30 text-teal-50 rounded-tr-xs"
+                  : "bg-[#101026] border border-white/10 text-slate-100 rounded-tl-xs"
               }`}
             >
               {/* Sender Name Header */}
               {!message.isDeleted && (
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className={`text-[10px] font-bold tracking-wide ${isMe ? "text-blue-100" : "text-emerald-400"}`}>
+                  <span className={`text-[10px] font-bold ${isMe ? "text-teal-300" : "text-emerald-400"}`}>
                     {message.senderName || "Member"}
                   </span>
                 </div>
@@ -211,12 +211,12 @@ export default function MessageBubble({
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                    className="w-full bg-white/15 border border-white/30 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-white"
+                    className="w-full bg-white/10 border border-teal-400/40 rounded px-2.5 py-1.5 text-xs text-white outline-none focus:border-teal-400"
                     autoFocus
                   />
                   <div className="flex gap-1.5 justify-end">
-                    <button type="button" onClick={() => setIsEditing(false)} className="px-2.5 py-1 text-[10px] bg-white/15 hover:bg-white/25 rounded-lg text-white cursor-pointer">Cancel</button>
-                    <button type="button" onClick={handleSaveEdit} className="px-2.5 py-1 text-[10px] bg-white text-blue-600 rounded-lg font-bold cursor-pointer hover:bg-white/90">Save</button>
+                    <button type="button" onClick={() => setIsEditing(false)} className="px-2 py-0.5 text-[10px] bg-white/10 hover:bg-white/20 rounded text-slate-300 cursor-pointer">Cancel</button>
+                    <button type="button" onClick={handleSaveEdit} className="px-2 py-0.5 text-[10px] bg-teal-600 hover:bg-teal-500 rounded text-white font-bold cursor-pointer">Save</button>
                   </div>
                 </div>
               ) : (
@@ -246,9 +246,9 @@ export default function MessageBubble({
                   )}
                   {message.text && (
                     message.effect === "invisible_ink" ? (
-                      <InvisibleInk><p className="whitespace-pre-wrap break-words leading-relaxed text-[12.5px] sm:text-[13.5px] font-normal my-0.5">{message.text}</p></InvisibleInk>
+                      <InvisibleInk><p className="whitespace-pre-wrap break-words leading-relaxed text-[12px] sm:text-[13px] text-white my-0.5">{message.text}</p></InvisibleInk>
                     ) : (
-                      <p className="whitespace-pre-wrap break-words leading-relaxed text-[12.5px] sm:text-[13.5px] font-normal my-0.5">{message.text}</p>
+                      <p className="whitespace-pre-wrap break-words leading-relaxed text-[12px] sm:text-[13px] text-white my-0.5">{message.text}</p>
                     )
                   )}
                 </div>
@@ -274,11 +274,11 @@ export default function MessageBubble({
               )}
 
               {/* TIMESTAMP & TICK STATUS */}
-              <div className={`flex items-center justify-end gap-1.5 mt-1 pt-0.5 text-[9.5px] select-none font-mono ${isMe ? "text-blue-100/80" : "text-slate-400"}`}>
+              <div className="flex items-center justify-end gap-1.5 mt-1 pt-0.5 text-[9.5px] select-none font-mono text-slate-400">
                 {message.isEdited && <span className="opacity-70 italic text-[8px] mr-0.5">(edited)</span>}
                 <span>{timeStr}</span>
                 {isMe && !message.isDeleted && (
-                  <span className={message.isRead ? "text-white ml-0.5 font-bold" : "text-blue-200/60 ml-0.5"}>
+                  <span className={message.isRead ? "text-teal-400 font-bold ml-0.5" : "text-slate-500 ml-0.5"}>
                     <CheckCheck className="w-3.5 h-3.5 inline" />
                   </span>
                 )}
