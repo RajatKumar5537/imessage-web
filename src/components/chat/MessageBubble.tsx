@@ -19,6 +19,7 @@ import TapbackMenu from "./TapbackMenu";
 import InvisibleInk from "../effects/InvisibleInk";
 import VoiceMemoPlayer from "./VoiceMemoPlayer";
 import MessageInfoModal from "./MessageInfoModal";
+import MediaViewerModal from "./MediaViewerModal";
 import { getFallbackAvatar } from "@/lib/avatars";
 import { soundEngine } from "@/lib/audio";
 
@@ -87,6 +88,7 @@ export default function MessageBubble({
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
   const [copied, setCopied] = useState(false);
+  const [showMediaViewer, setShowMediaViewer] = useState(false);
 
   // Universal gesture swipe (left or right) to reply
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
@@ -192,6 +194,18 @@ export default function MessageBubble({
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     }
+  };
+
+  const handleDownloadMedia = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!message.mediaData) return;
+    const link = document.createElement("a");
+    link.href = message.mediaData;
+    const defaultExt = message.mediaType === "video" ? "mp4" : "jpg";
+    link.download = message.mediaName || `media_${Date.now()}.${defaultExt}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getMotionProps = () => {
@@ -304,7 +318,7 @@ export default function MessageBubble({
               transition={motionProps.transition}
               onContextMenu={(e) => { e.preventDefault(); setShowTapback(true); }}
               onClick={() => setShowActions((v) => !v)}
-              className={`relative w-fit max-w-full rounded-[20px] px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-sm select-none touch-pan-y cursor-pointer ${
+              className={`relative w-fit max-w-full rounded-[18px] px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-sm select-none touch-pan-y cursor-pointer ${
                 message.isDeleted
                   ? "bg-white/[0.05] text-slate-400 italic border border-white/5"
                   : isMe
@@ -314,7 +328,7 @@ export default function MessageBubble({
             >
               {/* Sender Name only in Group Chats on received messages */}
               {!isMe && showAvatar && !message.isDeleted && (
-                <div className="text-[11px] font-semibold text-blue-400 mb-0.5 select-none">
+                <div className="text-[11px] font-semibold text-blue-400 mb-1 select-none">
                   {message.senderName || "Member"}
                 </div>
               )}
@@ -339,13 +353,45 @@ export default function MessageBubble({
               ) : (
                 <div className="space-y-1">
                   {message.mediaType === "image" && message.mediaData && (
-                    <div className="rounded-2xl overflow-hidden bg-black/30 mb-1">
-                      <img src={message.mediaData} alt={message.mediaName || "Photo"} className="w-full max-h-72 object-cover rounded-2xl hover:scale-[1.01] transition-transform cursor-pointer" />
+                    <div className="relative rounded-2xl overflow-hidden bg-black/30 mb-1 group/media">
+                      <img
+                        src={message.mediaData}
+                        alt={message.mediaName || "Photo"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowMediaViewer(true);
+                        }}
+                        className="w-full max-h-72 object-cover rounded-2xl hover:scale-[1.01] transition-transform cursor-pointer"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleDownloadMedia}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md shadow-md border border-white/20 transition-all hover:scale-110 active:scale-95 cursor-pointer z-10"
+                        title="Download Photo"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   )}
                   {message.mediaType === "video" && message.mediaData && (
-                    <div className="rounded-2xl overflow-hidden bg-black/30 mb-1">
-                      <video src={message.mediaData} controls className="w-full max-h-72 rounded-2xl" />
+                    <div className="relative rounded-2xl overflow-hidden bg-black/30 mb-1 group/media">
+                      <video
+                        src={message.mediaData}
+                        controls
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowMediaViewer(true);
+                        }}
+                        className="w-full max-h-72 rounded-2xl cursor-pointer"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleDownloadMedia}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white backdrop-blur-md shadow-md border border-white/20 transition-all hover:scale-110 active:scale-95 cursor-pointer z-10"
+                        title="Download Video"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   )}
                   {message.mediaType === "audio" && message.mediaData && (
@@ -365,31 +411,16 @@ export default function MessageBubble({
                   {message.text && (
                     message.effect === "invisible_ink" ? (
                       <InvisibleInk>
-                        <p className="whitespace-pre-wrap break-words leading-[1.38] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em]">{message.text}</p>
+                        <p className="whitespace-pre-wrap break-words leading-[1.38] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text">
+                          {message.text}
+                        </p>
                       </InvisibleInk>
                     ) : (
-                      <p className="whitespace-pre-wrap break-words leading-[1.38] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em]">{message.text}</p>
+                      <p className="whitespace-pre-wrap break-words leading-[1.38] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text">
+                        {message.text}
+                      </p>
                     )
                   )}
-                </div>
-              )}
-
-              {/* EFFECT BADGE */}
-              {!message.isDeleted && message.effect && message.effect !== "invisible_ink" && (
-                <div className="mt-1 mb-0.5">
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); onTriggerEffect && onTriggerEffect(message.effect); }}
-                    className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${
-                      isMe
-                        ? "bg-white/20 hover:bg-white/30 text-white border border-white/20"
-                        : "bg-white/10 hover:bg-white/20 text-slate-200 border border-white/10"
-                    }`}
-                    title="Replay Effect"
-                  >
-                    <Sparkles className="w-3 h-3 text-amber-300" />
-                    <span className="capitalize">{message.effect.replace("_", " ")}</span>
-                  </button>
                 </div>
               )}
 
@@ -408,10 +439,25 @@ export default function MessageBubble({
               )}
             </motion.div>
 
+            {/* EFFECT REPLAY BADGE OUTSIDE BUBBLE (Native Apple iMessage Style) */}
+            {!message.isDeleted && message.effect && message.effect !== "invisible_ink" && (
+              <div className={`mt-1 flex ${isMe ? "justify-end mr-1" : "justify-start ml-1"}`}>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onTriggerEffect && onTriggerEffect(message.effect); }}
+                  className="inline-flex items-center gap-1 text-[10.5px] px-2.5 py-0.5 rounded-full font-medium bg-white/10 hover:bg-white/20 text-slate-200 border border-white/10 transition-all cursor-pointer shadow-sm active:scale-95"
+                  title="Replay Effect"
+                >
+                  <Sparkles className="w-3 h-3 text-amber-300" />
+                  <span className="capitalize">Replay {message.effect.replace("_", " ")}</span>
+                </button>
+              </div>
+            )}
+
             {/* STATUS & TIMESTAMP BELOW BUBBLE (Native iOS iMessage Style) */}
             {!message.isDeleted && (
               <div
-                className={`mt-1 flex items-center gap-1.5 text-[10px] sm:text-[10.5px] text-zinc-400 select-none ${
+                className={`mt-1 flex items-center gap-1.5 text-[11px] text-zinc-400 select-none ${
                   isMe ? "justify-end mr-1" : "justify-start ml-1"
                 }`}
               >
@@ -476,6 +522,18 @@ export default function MessageBubble({
         message={message}
         partnerName={partnerName}
       />
+
+      {/* FULLSCREEN MEDIA VIEWER MODAL */}
+      {showMediaViewer && message.mediaData && (message.mediaType === "image" || message.mediaType === "video") && (
+        <MediaViewerModal
+          isOpen={showMediaViewer}
+          mediaType={message.mediaType}
+          mediaData={message.mediaData}
+          mediaName={message.mediaName}
+          mediaSize={message.mediaSize}
+          onClose={() => setShowMediaViewer(false)}
+        />
+      )}
     </>
   );
 }

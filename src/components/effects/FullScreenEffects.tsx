@@ -133,6 +133,13 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       }, 550);
       timeoutIds.push(barrageInterval);
 
+      // Stop launching new rockets around 5.5s so existing explosions conclude naturally by ~8s
+      timeoutIds.push(
+        setTimeout(() => {
+          clearInterval(barrageInterval);
+        }, 5500)
+      );
+
       const render = () => {
         if (!isRunning || !ctx) return;
         ctx.clearRect(0, 0, width, height);
@@ -528,7 +535,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       render();
     }
 
-    // Auto dismiss after 30 seconds
+    // Auto dismiss after 8s for fireworks (7-10 seconds as requested) and 7s for others
     const handleDismiss = () => {
       isRunning = false;
       clearTimeout(timer);
@@ -540,7 +547,8 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       }
     };
 
-    const timer = setTimeout(handleDismiss, 30000);
+    const effectDuration = effect === "fireworks" ? 8000 : 7000;
+    const timer = setTimeout(handleDismiss, effectDuration);
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleDismiss();
