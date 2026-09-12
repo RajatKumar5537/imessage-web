@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     }
     const currentUserId = currentUser._id.toString();
 
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(req.url, "http://localhost:3000");
     const searchEmail = searchParams.get("search")?.toLowerCase().trim();
 
     // If searching for users to add
@@ -252,7 +252,7 @@ export async function DELETE(req: Request) {
     }
     const currentUserId = currentUser._id.toString();
 
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(req.url, "http://localhost:3000");
     const connectionId = searchParams.get("connectionId");
 
     if (!connectionId) {

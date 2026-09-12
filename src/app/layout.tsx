@@ -3,6 +3,10 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXTAUTH_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+  ),
   title: "iMessage — Next-Gen Encrypted Messaging",
   description: "Advanced Apple iMessage real-time messaging, screen effects, voice notes & WebRTC calling",
 };

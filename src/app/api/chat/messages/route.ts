@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     }
     const currentUserId = currentUser._id.toString();
 
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(req.url, "http://localhost:3000");
     const conversationId = searchParams.get("conversationId");
     const queryTerm = searchParams.get("q")?.toLowerCase().trim();
 

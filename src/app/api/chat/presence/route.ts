@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     }
 
     await dbConnect();
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(req.url, "http://localhost:3000");
     const conversationId = searchParams.get("conversationId");
 
     const cutoff = new Date(Date.now() - 15 * 1000); // active within last 15s
