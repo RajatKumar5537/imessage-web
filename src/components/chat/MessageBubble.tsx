@@ -185,18 +185,18 @@ export default function MessageBubble({
               transition={motionProps.transition}
               onContextMenu={(e) => { e.preventDefault(); setShowTapback(true); }}
               onClick={() => setShowActions((v) => !v)}
-              className={`relative min-w-[85px] rounded-[18px] px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-md select-none touch-pan-y cursor-pointer ${
+              className={`relative min-w-[115px] max-w-full rounded-2xl p-2.5 sm:p-3 text-xs shadow-md select-none touch-pan-y cursor-pointer ${
                 message.isDeleted
-                  ? "bg-white/[0.04] text-slate-400 italic text-xs border border-white/5"
+                  ? "bg-white/[0.04] text-slate-400 italic border border-white/5"
                   : isMe
-                  ? "bg-[#007AFF] text-white rounded-br-[5px]"
-                  : "bg-[#26252A] border border-white/10 text-slate-100 rounded-bl-[5px]"
+                  ? "bg-[#007AFF] text-white rounded-tr-xs"
+                  : "bg-[#26252A] border border-white/10 text-slate-100 rounded-tl-xs"
               }`}
             >
-              {/* Group sender name for incoming message only */}
-              {!isMe && showAvatar && !message.isDeleted && (
-                <div className="mb-1">
-                  <span className="text-[11px] font-bold text-[#30D158] tracking-wide">
+              {/* Sender Name Header */}
+              {!message.isDeleted && (
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className={`text-[10px] font-bold tracking-wide ${isMe ? "text-blue-100" : "text-emerald-400"}`}>
                     {message.senderName || "Member"}
                   </span>
                 </div>
@@ -220,14 +220,14 @@ export default function MessageBubble({
                   </div>
                 </div>
               ) : (
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   {message.mediaType === "image" && message.mediaData && (
-                    <div className="rounded-xl overflow-hidden border border-white/10 bg-black/40">
+                    <div className="rounded-xl overflow-hidden border border-white/10 bg-black/40 mb-1.5">
                       <img src={message.mediaData} alt={message.mediaName || "Photo"} className="w-full max-h-72 object-cover rounded-xl hover:scale-[1.01] transition-transform cursor-pointer" />
                     </div>
                   )}
                   {message.mediaType === "video" && message.mediaData && (
-                    <div className="rounded-xl overflow-hidden border border-white/10 bg-black/40">
+                    <div className="rounded-xl overflow-hidden border border-white/10 bg-black/40 mb-1.5">
                       <video src={message.mediaData} controls className="w-full max-h-72 rounded-xl" />
                     </div>
                   )}
@@ -246,9 +246,9 @@ export default function MessageBubble({
                   )}
                   {message.text && (
                     message.effect === "invisible_ink" ? (
-                      <InvisibleInk><p className="whitespace-pre-wrap break-words leading-relaxed text-[13px] sm:text-[14px]">{message.text}</p></InvisibleInk>
+                      <InvisibleInk><p className="whitespace-pre-wrap break-words leading-relaxed text-[12.5px] sm:text-[13.5px] font-normal my-0.5">{message.text}</p></InvisibleInk>
                     ) : (
-                      <p className="whitespace-pre-wrap break-words leading-relaxed text-[13px] sm:text-[14px]">{message.text}</p>
+                      <p className="whitespace-pre-wrap break-words leading-relaxed text-[12.5px] sm:text-[13.5px] font-normal my-0.5">{message.text}</p>
                     )
                   )}
                 </div>
@@ -256,11 +256,11 @@ export default function MessageBubble({
 
               {/* EFFECT BADGE */}
               {!message.isDeleted && message.effect && message.effect !== "invisible_ink" && (
-                <div className="mt-1.5">
+                <div className="mt-1 mb-0.5">
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onTriggerEffect && onTriggerEffect(message.effect); }}
-                    className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full font-medium transition-all ${
+                    className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium transition-all ${
                       isMe
                         ? "bg-white/20 hover:bg-white/30 text-white border border-white/20"
                         : "bg-white/10 hover:bg-white/20 text-slate-200 border border-white/10"
@@ -274,8 +274,8 @@ export default function MessageBubble({
               )}
 
               {/* TIMESTAMP & TICK STATUS */}
-              <div className={`flex items-center justify-end gap-1 mt-1 text-[10px] select-none font-mono ${isMe ? "text-blue-100/80" : "text-slate-400"}`}>
-                {message.isEdited && <span className="opacity-70 italic text-[9px] mr-0.5">(edited)</span>}
+              <div className={`flex items-center justify-end gap-1.5 mt-1 pt-0.5 text-[9.5px] select-none font-mono ${isMe ? "text-blue-100/80" : "text-slate-400"}`}>
+                {message.isEdited && <span className="opacity-70 italic text-[8px] mr-0.5">(edited)</span>}
                 <span>{timeStr}</span>
                 {isMe && !message.isDeleted && (
                   <span className={message.isRead ? "text-white ml-0.5 font-bold" : "text-blue-200/60 ml-0.5"}>
