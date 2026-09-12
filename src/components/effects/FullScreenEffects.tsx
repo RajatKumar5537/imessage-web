@@ -10,6 +10,8 @@ interface FullScreenEffectsProps {
 
 export default function FullScreenEffects({ effect, onComplete }: FullScreenEffectsProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     if (!effect) return;
@@ -31,6 +33,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
 
     let animationFrameId: number;
     let isRunning = true;
+    const timeoutIds: any[] = [];
 
     // Play initial sound
     if (effect === "fireworks") {
@@ -40,7 +43,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     }
 
     /* -------------------------------------------------------------
-       1. FIREWORKS PARTICLE ENGINE (Exact Match to Screenshot #2)
+       1. FIREWORKS PARTICLE ENGINE (Precise 3.5s sequence)
        ------------------------------------------------------------- */
     if (effect === "fireworks") {
       const colors = ["#FF416C", "#FF4B2B", "#00F2FE", "#4FACFE", "#FEE140", "#FA709A", "#30cfd0", "#ffffff", "#38ef7d"];
@@ -67,6 +70,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       }> = [];
 
       const createRocket = () => {
+        if (!isRunning) return;
         const x = width * 0.2 + Math.random() * (width * 0.6);
         const targetY = height * 0.15 + Math.random() * (height * 0.45);
         rockets.push({
@@ -74,17 +78,18 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
           y: height,
           targetY,
           vx: (Math.random() - 0.5) * 2,
-          vy: -(8 + Math.random() * 5),
+          vy: -(9 + Math.random() * 5),
           color: colors[Math.floor(Math.random() * colors.length)],
         });
       };
 
       const explode = (x: number, y: number, color: string) => {
+        if (!isRunning) return;
         soundEngine.playFireworksCrackle();
-        const count = 120 + Math.floor(Math.random() * 80);
+        const count = 90 + Math.floor(Math.random() * 50);
         for (let i = 0; i < count; i++) {
           const angle = Math.random() * Math.PI * 2;
-          const speed = Math.random() * 7 + 2;
+          const speed = Math.random() * 6 + 2;
           particles.push({
             x,
             y,
@@ -93,20 +98,20 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
             alpha: 1,
             color: Math.random() > 0.3 ? color : colors[Math.floor(Math.random() * colors.length)],
             size: Math.random() * 3 + 1.5,
-            decay: Math.random() * 0.015 + 0.008,
-            friction: 0.96,
-            gravity: 0.08,
+            decay: Math.random() * 0.02 + 0.012,
+            friction: 0.95,
+            gravity: 0.09,
           });
         }
       };
 
-      // Launch immediate rockets
+      // Launch 3 controlled rocket bursts
       createRocket();
-      setTimeout(createRocket, 250);
-      setTimeout(createRocket, 600);
-      setTimeout(createRocket, 1100);
+      timeoutIds.push(setTimeout(createRocket, 300));
+      timeoutIds.push(setTimeout(createRocket, 700));
 
       const render = () => {
+        if (!isRunning || !ctx) return;
         ctx.clearRect(0, 0, width, height);
 
         // Update & draw rockets
@@ -173,25 +178,26 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
        ------------------------------------------------------------- */
     else if (effect === "balloons") {
       const balloonColors = ["#FF3B30", "#FF9500", "#FFCC00", "#34C759", "#007AFF", "#AF52DE", "#FF2D55"];
-      const balloons = Array.from({ length: 25 }).map(() => ({
+      const balloons = Array.from({ length: 22 }).map(() => ({
         x: Math.random() * width,
         y: height + Math.random() * 300,
         vx: (Math.random() - 0.5) * 1.5,
         vy: -(Math.random() * 3 + 2.5),
         color: balloonColors[Math.floor(Math.random() * balloonColors.length)],
-        radiusX: Math.random() * 14 + 22,
-        radiusY: Math.random() * 18 + 28,
+        radiusX: Math.random() * 14 + 20,
+        radiusY: Math.random() * 18 + 26,
         wiggleOffset: Math.random() * 100,
       }));
 
       const render = () => {
+        if (!isRunning || !ctx) return;
         ctx.clearRect(0, 0, width, height);
 
         for (const b of balloons) {
           b.y += b.vy;
           b.x += b.vx + Math.sin((b.y + b.wiggleOffset) * 0.02) * 0.8;
 
-          // Draw String
+          // String
           ctx.beginPath();
           ctx.moveTo(b.x, b.y + b.radiusY);
           ctx.quadraticCurveTo(b.x + 8, b.y + b.radiusY + 25, b.x, b.y + b.radiusY + 50);
@@ -199,7 +205,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
           ctx.lineWidth = 1.2;
           ctx.stroke();
 
-          // Draw Balloon
+          // Balloon
           ctx.save();
           ctx.beginPath();
           ctx.ellipse(b.x, b.y, b.radiusX, b.radiusY, 0, 0, Math.PI * 2);
@@ -209,7 +215,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
           ctx.shadowColor = b.color;
           ctx.fill();
 
-          // Highlight reflection
+          // Highlight
           ctx.beginPath();
           ctx.ellipse(b.x - b.radiusX * 0.35, b.y - b.radiusY * 0.35, b.radiusX * 0.25, b.radiusY * 0.2, -Math.PI / 4, 0, Math.PI * 2);
           ctx.fillStyle = "rgba(255,255,255,0.6)";
@@ -230,7 +236,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
        ------------------------------------------------------------- */
     else if (effect === "confetti") {
       const confettiColors = ["#FFD700", "#FF69B4", "#00FFFF", "#7FFF00", "#FF4500", "#9400D3", "#FFFFFF"];
-      const pieces = Array.from({ length: 140 }).map(() => ({
+      const pieces = Array.from({ length: 120 }).map(() => ({
         x: Math.random() * width,
         y: -Math.random() * height * 0.5,
         vx: (Math.random() - 0.5) * 4,
@@ -242,6 +248,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       }));
 
       const render = () => {
+        if (!isRunning || !ctx) return;
         ctx.clearRect(0, 0, width, height);
 
         for (const p of pieces) {
@@ -269,13 +276,12 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
        4. LOVE / HEARTS ENGINE
        ------------------------------------------------------------- */
     else if (effect === "love") {
-      const hearts = Array.from({ length: 22 }).map(() => ({
+      const hearts = Array.from({ length: 20 }).map(() => ({
         x: width * 0.2 + Math.random() * (width * 0.6),
         y: height + Math.random() * 200,
         vx: (Math.random() - 0.5) * 2,
         vy: -(Math.random() * 3 + 2),
         scale: Math.random() * 0.8 + 0.6,
-        alpha: 0.9,
       }));
 
       const drawHeart = (cx: number, cy: number, scale: number) => {
@@ -294,6 +300,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       };
 
       const render = () => {
+        if (!isRunning || !ctx) return;
         ctx.clearRect(0, 0, width, height);
 
         for (const h of hearts) {
@@ -316,6 +323,7 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     else if (effect === "lasers") {
       let time = 0;
       const render = () => {
+        if (!isRunning || !ctx) return;
         ctx.clearRect(0, 0, width, height);
         time += 0.04;
 
@@ -349,24 +357,58 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
        6. SHOOTING STAR ENGINE
        ------------------------------------------------------------- */
     else if (effect === "shooting_star") {
-      let star = { x: width * 0.1, y: height * 0.1, vx: 16, vy: 9, trail: [] as any[] };
+      let angle = 0; // direction angle in radians
+      let star = {
+        x: width * 0.05 + Math.random() * width * 0.3,
+        y: height * 0.05 + Math.random() * height * 0.2,
+        vx: 14 + Math.random() * 8,
+        vy: 6 + Math.random() * 6,
+        trail: [] as { x: number; y: number }[],
+        alpha: 1,
+      };
 
       const render = () => {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
-        ctx.fillRect(0, 0, width, height);
+        if (!isRunning || !ctx) return;
+        // Clear properly each frame - no accumulation
+        ctx.clearRect(0, 0, width, height);
 
         star.x += star.vx;
         star.y += star.vy;
         star.trail.push({ x: star.x, y: star.y });
-        if (star.trail.length > 20) star.trail.shift();
+        if (star.trail.length > 28) star.trail.shift();
 
-        // Draw trail
+        // Draw glowing trail
         for (let i = 0; i < star.trail.length; i++) {
           const t = star.trail[i];
+          const progress = i / star.trail.length;
+          const radius = progress * 5;
+          ctx.save();
+          ctx.globalAlpha = progress * 0.9;
           ctx.beginPath();
-          ctx.arc(t.x, t.y, (i / star.trail.length) * 4, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255, 230, 100, ${i / star.trail.length})`;
+          ctx.arc(t.x, t.y, radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 240, 120, 1)`;
+          ctx.shadowBlur = 18;
+          ctx.shadowColor = "rgba(255, 220, 80, 0.9)";
           ctx.fill();
+          ctx.restore();
+        }
+
+        // Head glow
+        ctx.save();
+        ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#fffde7";
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = "rgba(255, 240, 100, 1)";
+        ctx.fill();
+        ctx.restore();
+
+        // Reset if off screen
+        if (star.x > width + 100 || star.y > height + 100) {
+          star.x = width * 0.05;
+          star.y = Math.random() * height * 0.3;
+          star.trail = [];
         }
 
         if (isRunning) {
@@ -377,20 +419,36 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       render();
     }
 
-    // Auto dismiss effect after 5 seconds
-    const timer = setTimeout(() => {
+    // Auto dismiss effect after 30 seconds (no click listener - that fires on Send button)
+    const handleDismiss = () => {
       isRunning = false;
+      clearTimeout(timer);
+      timeoutIds.forEach((id) => clearTimeout(id));
       cancelAnimationFrame(animationFrameId);
-      if (onComplete) onComplete();
-    }, 5500);
+      if (ctx) ctx.clearRect(0, 0, width, height);
+      if (onCompleteRef.current) {
+        onCompleteRef.current();
+      }
+    };
+
+    const timer = setTimeout(handleDismiss, 30000);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleDismiss();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       isRunning = false;
       clearTimeout(timer);
+      timeoutIds.forEach((id) => clearTimeout(id));
       cancelAnimationFrame(animationFrameId);
+      if (ctx) ctx.clearRect(0, 0, width, height);
       window.removeEventListener("resize", handleResize);
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [effect, onComplete]);
+  }, [effect]);
 
   if (!effect) return null;
 

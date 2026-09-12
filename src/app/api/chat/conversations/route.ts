@@ -5,7 +5,7 @@ import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import Conversation from "@/lib/models/Conversation";
 import Message from "@/lib/models/Message";
-import { decryptField, encryptField } from "@/lib/crypto";
+import { decryptField, encryptField, decryptMessage } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -54,16 +54,75 @@ export async function GET() {
           isDeleted: false,
         });
 
-        // Determine title & avatar
+        // Determine title & avatar & lastSeen
         let displayName = conv.name;
         let displayAvatar = conv.icon;
         let displayOnline = false;
+        let displayLastSeen: any = null;
 
         if (conv.type === "direct") {
           const peer = otherUsers[0];
           displayName = peer ? peer.name : "Contact";
           displayAvatar = peer ? peer.avatar : "";
-          displayOnline = peer ? Boolean(peer.isOnline) : false;
+          displayLastSeen = peer?.lastSeen || null;
+          // Online if flagged online AND active within last 35 seconds
+          if (peer?.isOnline && peer?.lastSeen) {
+            const diff = Date.now() - new Date(peer.lastSeen).getTime();
+            displayOnline = diff < 35000;
+          } else {
+            displayOnline = Boolean(peer?.isOnline);
+          }
+        }
+
+        // Fetch the actual latest message document to reflect live isRead & text
+        const lastMsg = await Message.findOne({
+          conversationId: conv._id.toString(),
+          clearedFor: { $ne: currentUserId },
+        })
+          .sort({ createdAt: -1 })
+          .lean();
+
+        let lastMessageData: any = null;
+        if (lastMsg) {
+          let plainText = "";
+          if (lastMsg.isDeleted) {
+            plainText = "This message was deleted";
+          } else if (lastMsg.mediaType && !lastMsg.content) {
+            plainText = `[${lastMsg.mediaType.toUpperCase()}] ${lastMsg.mediaName || ""}`;
+          } else {
+            try {
+              plainText = decryptMessage({
+                content: lastMsg.content,
+                iv: lastMsg.iv,
+                authTag: lastMsg.authTag,
+              });
+            } catch {
+              plainText = lastMsg.content || "";
+            }
+          }
+
+          const isMe = lastMsg.senderId === currentUserId;
+          const isRead = (lastMsg.readBy || []).length > 0;
+          const readAt = lastMsg.readBy?.[0]?.readAt || null;
+
+          lastMessageData = {
+            text: plainText,
+            senderId: lastMsg.senderId,
+            senderName: lastMsg.senderName,
+            isMe,
+            isRead,
+            readAt,
+            createdAt: lastMsg.createdAt,
+            mediaType: lastMsg.mediaType || null,
+            effect: lastMsg.effect || null,
+          };
+        } else if (conv.lastMessage?.text) {
+          lastMessageData = {
+            ...conv.lastMessage,
+            text: decryptField(conv.lastMessage.text),
+            isMe: conv.lastMessage.senderId === currentUserId,
+            isRead: false,
+          };
         }
 
         return {
@@ -76,14 +135,10 @@ export async function GET() {
           admins: conv.admins || [],
           isPinned: (conv.isPinnedBy || []).includes(currentUserId),
           disappearingHours: conv.disappearingHours || 0,
-          lastMessage: conv.lastMessage
-            ? {
-                ...conv.lastMessage,
-                text: decryptField(conv.lastMessage.text),
-              }
-            : null,
+          lastMessage: lastMessageData,
           unreadCount,
           isOnline: displayOnline,
+          lastSeen: displayLastSeen,
           updatedAt: conv.updatedAt,
         };
       })
@@ -142,13 +197,15 @@ export async function POST(req: Request) {
     // Direct conversation
     let targetRecipientId = recipientId;
     if (!targetRecipientId && recipientEmail) {
-      const peer = await User.findOne({ email: recipientEmail.toLowerCase().trim() });
-      if (peer) targetRecipientId = peer._id.toString();
+      const peerUser = await User.findOne({ email: recipientEmail.toLowerCase().trim() });
+      if (peerUser) targetRecipientId = peerUser._id.toString();
     }
 
     if (!targetRecipientId) {
       return NextResponse.json({ error: "Recipient is required" }, { status: 400 });
     }
+
+    const peer = await User.findById(targetRecipientId).select("name email avatar isOnline lastSeen statusMessage").lean();
 
     // Check if direct conversation already exists
     let existingConv = await Conversation.findOne({
@@ -157,7 +214,33 @@ export async function POST(req: Request) {
     });
 
     if (existingConv) {
-      return NextResponse.json(existingConv);
+      // If user had cleared/deleted the conversation, un-clear it so it re-appears in chat list!
+      if (existingConv.clearedFor && existingConv.clearedFor.length > 0) {
+        await Conversation.findByIdAndUpdate(existingConv._id, {
+          $pull: { clearedFor: currentUserId },
+        });
+      }
+
+      return NextResponse.json({
+        _id: existingConv._id.toString(),
+        type: "direct",
+        name: peer ? peer.name : "Contact",
+        icon: peer ? peer.avatar : "",
+        participants: existingConv.participants,
+        participantDetails: [currentUser, peer].filter(Boolean),
+        admins: existingConv.admins || [],
+        isPinned: (existingConv.isPinnedBy || []).includes(currentUserId),
+        disappearingHours: existingConv.disappearingHours || 0,
+        lastMessage: existingConv.lastMessage
+          ? {
+              ...existingConv.lastMessage,
+              text: decryptField(existingConv.lastMessage.text),
+            }
+          : null,
+        unreadCount: 0,
+        isOnline: peer ? Boolean(peer.isOnline) : false,
+        updatedAt: existingConv.updatedAt,
+      });
     }
 
     const newConv = await Conversation.create({
@@ -171,7 +254,29 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(newConv, { status: 201 });
+    return NextResponse.json(
+      {
+        _id: newConv._id.toString(),
+        type: "direct",
+        name: peer ? peer.name : "Contact",
+        icon: peer ? peer.avatar : "",
+        participants: newConv.participants,
+        participantDetails: [currentUser, peer].filter(Boolean),
+        admins: [],
+        isPinned: false,
+        disappearingHours: 0,
+        lastMessage: {
+          text: "Started a conversation",
+          senderId: currentUserId,
+          senderName: currentUser.name,
+          createdAt: new Date(),
+        },
+        unreadCount: 0,
+        isOnline: peer ? Boolean(peer.isOnline) : false,
+        updatedAt: newConv.updatedAt,
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
     console.error("POST Conversation Error:", error);
     return NextResponse.json({ error: "Failed to create conversation" }, { status: 500 });

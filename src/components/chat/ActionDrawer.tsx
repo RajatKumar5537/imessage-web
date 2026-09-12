@@ -75,8 +75,12 @@ export default function ActionDrawer({
     { id: "balloons", label: "Balloons 🎈", icon: Sparkles, color: "from-blue-500 to-cyan-400", desc: "Floating festive helium balloons" },
     { id: "confetti", label: "Confetti 🎉", icon: PartyPopper, color: "from-purple-500 to-pink-500", desc: "Glittering celebration cascade" },
     { id: "love", label: "Hearts ❤️", icon: Heart, color: "from-rose-500 to-pink-600", desc: "Surging pulse of 3D floating hearts" },
-    { id: "lasers", label: "Lasers ⚡", icon: Zap, color: "from-emerald-400 to-cyan-500", desc: "Nightclub laser beam prism sweep" },
-    { id: "invisible_ink", label: "Invisible Ink 🪄", icon: EyeOff, color: "from-yellow-400 to-amber-600", desc: "Cover message in scratch dust" },
+    { id: "lasers", label: "Lasers ⚡", icon: Zap, color: "from-cyan-400 to-blue-600", desc: "Nightclub laser beam sweep" },
+    { id: "shooting_star", label: "Shooting Star 🌠", icon: Sparkles, color: "from-amber-400 to-yellow-200", desc: "Comet zooming with sparkle trail" },
+    { id: "invisible_ink", label: "Invisible Ink 🪄", icon: EyeOff, color: "from-yellow-400 to-amber-600", desc: "Cover message in secret scratch dust" },
+    { id: "slam", label: "Slam 💥", icon: Zap, color: "from-orange-500 to-red-600", desc: "Bubble slams down with impact bounce" },
+    { id: "loud", label: "Loud 📢", icon: Flame, color: "from-rose-500 to-purple-600", desc: "Bubble inflates big and shakes" },
+    { id: "gentle", label: "Gentle 🪶", icon: Sparkles, color: "from-blue-400 to-indigo-400", desc: "Bubble glides in softly" },
   ];
 
   const timerOptions = [
@@ -118,7 +122,7 @@ export default function ActionDrawer({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 15 }}
             transition={{ type: "spring", damping: 26, stiffness: 320 }}
-            className="absolute bottom-14 left-0 sm:left-2 z-50 w-[calc(100vw-32px)] max-w-[300px] sm:max-w-xs sm:w-76 bg-neutral-900/95 backdrop-blur-2xl border border-white/15 rounded-3xl p-3.5 shadow-2xl shadow-black/90 overflow-hidden select-none"
+            className="absolute bottom-16 left-0 sm:left-2 z-50 w-[calc(100vw-32px)] max-w-[300px] sm:max-w-xs sm:w-76 bg-[#0b0b1a]/98 backdrop-blur-2xl border border-white/15 rounded-3xl p-3 shadow-2xl shadow-black/95 overflow-hidden select-none"
           >
             {/* Hidden Inputs */}
             <input
@@ -140,14 +144,13 @@ export default function ActionDrawer({
             {activeTab === "main" && (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-white/10">
-                  <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                    iMessage Apps
+                  <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider font-mono">
+                    Attachments & Apps
                   </span>
                   <button
                     type="button"
                     onClick={onClose}
-                    className="p-1 rounded-full text-neutral-400 hover:text-white hover:bg-white/10"
-                    title="Close"
+                    className="p-1 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -196,7 +199,7 @@ export default function ActionDrawer({
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-semibold text-white truncate">Send with Effect</span>
                       {selectedEffect && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 font-medium">
+                        <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-300 font-medium">
                           Active
                         </span>
                       )}
@@ -210,7 +213,7 @@ export default function ActionDrawer({
                   onClick={() => fileInputRef.current?.click()}
                   className="flex items-center gap-3 p-2.5 rounded-2xl hover:bg-white/10 text-white transition-all text-left cursor-pointer"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-md flex-shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-500 flex items-center justify-center text-white shadow-md flex-shrink-0">
                     <FileText className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">

@@ -82,6 +82,7 @@ const MessageSchema = new Schema(
       type: [
         {
           userId: { type: String, required: true },
+          userName: { type: String, default: "" },
           readAt: { type: Date, default: Date.now },
         },
       ],

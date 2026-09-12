@@ -15,7 +15,7 @@ import ContactProfileModal from "@/components/chat/ContactProfileModal";
 import ProfileSettingsModal from "@/components/chat/ProfileSettingsModal";
 import CallModal from "@/components/call/CallModal";
 import { soundEngine } from "@/lib/audio";
-import { MessageSquare, Sparkles } from "lucide-react";
+import { MessageSquare, Sparkles, Shield, Lock } from "lucide-react";
 
 export default function PrimeChatApp() {
   const { data: session, status } = useSession();
@@ -45,9 +45,11 @@ export default function PrimeChatApp() {
   // WebRTC Call State
   const [activeCall, setActiveCall] = useState<any | null>(null);
 
-  // Scroll ref
-  const chatBottomRef = useRef<HTMLDivElement | null>(null);
-  const prevMessagesCountRef = useRef(0);
+  // Contacts & Pending Requests
+  const [pendingIncomingRequests, setPendingIncomingRequests] = useState<any[]>([]);
+  const prevIncomingRequestsCountRef = useRef<number | null>(null);
+
+
 
   // 1. Auth Guard
   useEffect(() => {
@@ -62,22 +64,56 @@ export default function PrimeChatApp() {
   const currentUserAvatar = customProfile.avatar || session?.user?.image || "";
   const currentUserStatus = customProfile.statusMessage || "Active now";
 
-  // 2. Fetch Conversations
+  // Scroll ref & Effect tracking
+  const chatBottomRef = useRef<HTMLDivElement | null>(null);
+  const prevMessagesCountRef = useRef(0);
+  const prevTotalUnreadRef = useRef<number | null>(null);
+  const playedEffectIdsRef = useRef<Set<string>>(new Set());
+
+  // 1. Fetch Conversations
   const fetchConversations = async () => {
     if (status !== "authenticated") return;
     try {
       const res = await fetch("/api/chat/conversations");
       if (res.ok) {
-        const data = await res.json();
+        const data: ConversationItem[] = await res.json();
         setConversations(data);
 
-        // Auto select first conversation if none selected on desktop
-        if (!activeConversationId && data.length > 0 && typeof window !== "undefined" && window.innerWidth >= 768) {
-          setActiveConversationId(data[0]._id);
+        // Calculate total unread
+        const totalUnread = data.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+
+        if (prevTotalUnreadRef.current !== null && totalUnread > prevTotalUnreadRef.current) {
+          soundEngine.playReceived();
         }
+        prevTotalUnreadRef.current = totalUnread;
       }
     } catch (err) {
       console.error("Error fetching conversations:", err);
+    }
+  };
+
+  // 2. Fetch Contacts & Pending Requests
+  const fetchContactsAndRequests = async () => {
+    if (status !== "authenticated") return;
+    try {
+      const res = await fetch("/api/chat/contacts");
+      if (res.ok) {
+        const data = await res.json();
+        // API returns 'pendingIncoming' not 'incomingRequests'
+        const incoming = data.pendingIncoming || data.incomingRequests || [];
+        setPendingIncomingRequests(incoming);
+
+        // Sound on new incoming request
+        if (
+          prevIncomingRequestsCountRef.current !== null &&
+          incoming.length > prevIncomingRequestsCountRef.current
+        ) {
+          soundEngine.playReceived();
+        }
+        prevIncomingRequestsCountRef.current = incoming.length;
+      }
+    } catch (err) {
+      console.error("Error fetching contacts & requests:", err);
     }
   };
 
@@ -89,12 +125,18 @@ export default function PrimeChatApp() {
       if (res.ok) {
         const data: MessageProps[] = await res.json();
 
-        // Check if a new message arrived with an effect
-        if (data.length > prevMessagesCountRef.current && !isInitial) {
+        if (isInitial) {
+          // Mark all existing messages as already played so they don't replay on poll
+          data.forEach((m) => {
+            if (m._id) playedEffectIdsRef.current.add(m._id);
+          });
+        } else if (data.length > prevMessagesCountRef.current) {
+          // Check if a brand-new message arrived with an effect
           const lastMsg = data[data.length - 1];
-          if (!lastMsg.isMe) {
-            soundEngine.playReceived();
-            if (lastMsg.effect && lastMsg.effect !== "invisible_ink") {
+          if (!lastMsg.isMe && lastMsg.effect && lastMsg.effect !== "invisible_ink") {
+            if (!playedEffectIdsRef.current.has(lastMsg._id)) {
+              playedEffectIdsRef.current.add(lastMsg._id);
+              soundEngine.playReceived();
               setActiveEffect(lastMsg.effect);
             }
           }
@@ -102,6 +144,33 @@ export default function PrimeChatApp() {
 
         prevMessagesCountRef.current = data.length;
         setMessages(data);
+
+        // Immediately sync the active conversation's lastMessage & isRead in the sidebar list
+        if (data.length > 0) {
+          const latest = data[data.length - 1];
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c._id === convId) {
+                return {
+                  ...c,
+                  unreadCount: 0,
+                  lastMessage: {
+                    text: latest.text || (latest.mediaType ? `[${latest.mediaType.toUpperCase()}]` : ""),
+                    senderId: latest.senderId,
+                    senderName: latest.senderName,
+                    isMe: latest.isMe,
+                    isRead: Boolean(latest.isRead),
+                    readAt: latest.readBy?.[0]?.readAt,
+                    createdAt: latest.createdAt,
+                    mediaType: latest.mediaType || undefined,
+                    effect: latest.effect || undefined,
+                  },
+                };
+              }
+              return c;
+            })
+          );
+        }
 
         // Scroll to bottom on new message
         setTimeout(() => {
@@ -151,6 +220,7 @@ export default function PrimeChatApp() {
   useEffect(() => {
     if (status === "authenticated") {
       fetchConversations();
+      fetchContactsAndRequests();
     }
   }, [status]);
 
@@ -167,6 +237,7 @@ export default function PrimeChatApp() {
 
     const interval = setInterval(() => {
       fetchConversations();
+      fetchContactsAndRequests();
       if (activeConversationId) {
         fetchMessages(activeConversationId);
       }
@@ -340,11 +411,54 @@ export default function PrimeChatApp() {
       });
       if (res.ok) {
         const conv = await res.json();
-        await fetchConversations();
+        setConversations((prev) => {
+          const exists = prev.some((c) => c._id === conv._id);
+          if (exists) {
+            return prev.map((c) => (c._id === conv._id ? { ...c, ...conv } : c));
+          }
+          return [conv, ...prev];
+        });
         setActiveConversationId(conv._id);
         setMobileView("chat");
+        fetchMessages(conv._id, true);
+        await fetchConversations();
       }
-    } catch (_) {}
+    } catch (err) {
+      console.error("Error starting direct chat:", err);
+    }
+  };
+
+  // Friend Request Accept / Decline handlers
+  const handleAcceptRequest = async (connectionId: string) => {
+    try {
+      const res = await fetch("/api/chat/contacts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, status: "accepted" }),
+      });
+      if (res.ok) {
+        soundEngine.playSent();
+        await fetchContactsAndRequests();
+        await fetchConversations();
+      }
+    } catch (err) {
+      console.error("Error accepting request:", err);
+    }
+  };
+
+  const handleDeclineRequest = async (connectionId: string) => {
+    try {
+      const res = await fetch("/api/chat/contacts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ connectionId, status: "declined" }),
+      });
+      if (res.ok) {
+        await fetchContactsAndRequests();
+      }
+    } catch (err) {
+      console.error("Error declining request:", err);
+    }
   };
 
   // WebRTC Call actions
@@ -420,138 +534,165 @@ export default function PrimeChatApp() {
 
   if (status === "loading" || status === "unauthenticated") {
     return (
-      <div className="h-[100dvh] w-full flex items-center justify-center bg-neutral-950 text-white">
+      <div className="h-[100dvh] w-full flex items-center justify-center bg-[#020205] text-white">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-blue-600 animate-pulse flex items-center justify-center">
-            <MessageSquare className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/40 text-blue-400 animate-pulse flex items-center justify-center shadow-lg">
+            <Shield className="w-6 h-6" />
           </div>
-          <span className="text-sm text-neutral-400 font-medium">Loading iMessage...</span>
+          <span className="text-xs text-slate-400 font-mono">Loading Encrypted Chats...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-[100dvh] w-full max-w-full bg-neutral-950 text-white overflow-hidden overflow-x-hidden relative select-none">
-      {/* 🎆 FULL SCREEN PARTICLES / FIREWORKS ENGINE (MATCHING SCREENSHOT #2) */}
+    <div className="h-[100dvh] w-full flex items-center justify-center bg-[#000000] text-white p-0 sm:p-2 md:p-3 overflow-hidden select-none relative font-sans">
+      {/* 🎆 FULL SCREEN PARTICLES / FIREWORKS ENGINE */}
       <FullScreenEffects
         effect={activeEffect}
         onComplete={() => setActiveEffect(null)}
       />
 
-      {/* 1. LEFT SIDEBAR: CONVERSATION LIST */}
-      <div
-        className={`${
-          mobileView === "list" ? "flex" : "hidden"
-        } md:flex h-[100dvh] w-full max-w-full md:w-80 lg:w-96 flex-shrink-0 z-20 overflow-x-hidden`}
-      >
-        <ConversationList
-          conversations={conversations}
-          selectedId={activeConversationId}
-          onSelectConversation={handleSelectConversation}
-          onOpenNewChat={() => setIsContactModalOpen(true)}
-          onOpenNewGroup={() => setIsGroupModalOpen(true)}
-          onOpenContacts={() => setIsContactModalOpen(true)}
-          onOpenProfile={() => setIsMyProfileModalOpen(true)}
-          currentUser={{
-            name: currentUserName,
-            email: session?.user?.email || "",
-            avatar: currentUserAvatar,
-            statusMessage: currentUserStatus,
-          }}
-        />
-      </div>
+      {/* MAIN OBSIDIAN CONTAINER CARD */}
+      <div className="w-full h-full sm:max-h-[96vh] sm:max-w-[1440px] bg-[#0A0A0C]/98 backdrop-blur-2xl border-0 sm:border border-white/10 sm:rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_40px_rgba(0,122,255,0.1)] flex flex-row overflow-hidden relative">
+        {/* 1. LEFT SIDEBAR: CONVERSATION LIST */}
+        <div
+          className={`${
+            mobileView === "list" ? "flex" : "hidden"
+          } md:flex h-full w-full md:w-[340px] lg:w-[380px] flex-shrink-0 z-20 overflow-x-hidden`}
+        >
+          <ConversationList
+            conversations={conversations}
+            selectedId={activeConversationId}
+            pendingIncomingRequests={pendingIncomingRequests}
+            onAcceptRequest={handleAcceptRequest}
+            onDeclineRequest={handleDeclineRequest}
+            onSelectConversation={handleSelectConversation}
+            onOpenNewChat={() => setIsContactModalOpen(true)}
+            onOpenNewGroup={() => setIsGroupModalOpen(true)}
+            onOpenContacts={() => setIsContactModalOpen(true)}
+            onOpenProfile={() => setIsMyProfileModalOpen(true)}
+            currentUser={{
+              name: currentUserName,
+              email: session?.user?.email || "",
+              avatar: currentUserAvatar,
+              statusMessage: currentUserStatus,
+            }}
+          />
+        </div>
 
-      {/* 2. RIGHT / MAIN AREA: ACTIVE iMESSAGE CHAT */}
-      <div
-        className={`${
-          mobileView === "chat" ? "flex" : "hidden"
-        } md:flex flex-col flex-1 h-[100dvh] w-full max-w-full min-w-0 bg-neutral-950 relative overflow-x-hidden`}
-      >
-        {activeConversation ? (
-          <>
-            {/* TOP HEADER - CLICKING CONTACT PROFILE OPENS ContactProfileModal */}
-            <ChatHeader
-              conversation={activeConversation}
-              totalUnreadCount={totalUnreadCount}
-              onBackToConversations={() => setMobileView("list")}
-              onStartAudioCall={() => handleStartCall("audio")}
-              onStartVideoCall={() => handleStartCall("video")}
-              onOpenSearch={() => setIsSearchModalOpen(true)}
-              onOpenInfo={() => setIsProfileModalOpen(true)}
-              onClearChat={handleClearChat}
-              isTyping={typingUsers.length > 0}
-              typingUserName={typingUsers[0]}
-            />
+        {/* 2. RIGHT / MAIN AREA: ACTIVE CHAT PANE */}
+        <div
+          className={`${
+            mobileView === "chat" ? "flex" : "hidden"
+          } md:flex flex-col flex-1 h-full w-full max-w-full min-w-0 bg-[#000000] bg-radial-[at_top_right] from-blue-950/15 via-[#000000] to-[#000000] relative overflow-x-hidden`}
+        >
+          {activeConversation ? (
+            <>
+              {/* TOP HEADER */}
+              <ChatHeader
+                conversation={activeConversation}
+                totalUnreadCount={totalUnreadCount}
+                onBackToConversations={() => {
+                  setMobileView("list");
+                  if (typeof window !== "undefined" && window.innerWidth < 768) {
+                    // On mobile, switch view
+                  } else {
+                    setActiveConversationId(null);
+                  }
+                }}
+                onStartAudioCall={() => handleStartCall("audio")}
+                onStartVideoCall={() => handleStartCall("video")}
+                onOpenSearch={() => setIsSearchModalOpen(true)}
+                onOpenInfo={() => setIsProfileModalOpen(true)}
+                onClearChat={handleClearChat}
+                isTyping={typingUsers.length > 0}
+                typingUserName={typingUsers[0]}
+              />
 
-            {/* MESSAGE FEED */}
-            <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-1 relative">
-              {messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                  <div className="w-16 h-16 rounded-full bg-neutral-900 border border-white/10 flex items-center justify-center mb-3">
-                    <Sparkles className="w-7 h-7 text-blue-400" />
-                  </div>
-                  <h3 className="text-base font-bold text-white mb-1">
-                    Encrypted Conversation
-                  </h3>
-                  <p className="text-xs text-neutral-400 max-w-sm">
-                    Messages are protected with AES-256-GCM encryption. Try sending a message with
-                    Fireworks or Invisible Ink!
-                  </p>
+              {/* MESSAGE FEED */}
+              <div className="flex-1 overflow-y-auto py-3 sm:py-4 px-2 sm:px-4 relative overscroll-contain">
+                <div className="max-w-4xl mx-auto w-full flex flex-col justify-end min-h-full">
+                  {messages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center min-h-[160px] my-auto text-center space-y-2.5 p-6 border border-dashed border-white/10 rounded-3xl bg-white/[0.03] backdrop-blur-md">
+                      <div className="p-3 rounded-2xl bg-blue-500/20 text-[#007AFF] border border-blue-400/30 shadow-inner">
+                        <Sparkles size={24} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-slate-200 font-mono">
+                          iMessage with {activeConversation.name}
+                        </h4>
+                        <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                          {activeConversation.disappearingHours && activeConversation.disappearingHours > 0
+                            ? `Messages are end-to-end encrypted and self-destruct in ${activeConversation.disappearingHours} hours.`
+                            : "Messages are end-to-end encrypted with AES-256 GCM."}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    messages.map((msg) => (
+                      <div key={msg._id} className={(msg.reactions?.length ?? 0) > 0 ? 'mb-4 sm:mb-5' : 'mb-2 sm:mb-2.5'}>
+                        <MessageBubble
+                          message={msg}
+                          currentUserId={currentUserId}
+                          partnerName={activeConversation.name}
+                          onReact={handleReact}
+                          onReply={(m) => setReplyTo({ id: m._id, senderName: m.senderName, text: m.text, mediaType: m.mediaType })}
+                          onEdit={handleEditMessage}
+                          onDelete={handleDeleteMessage}
+                          onTogglePin={handleTogglePin}
+                          onTriggerEffect={(eff) => setActiveEffect(eff)}
+                          showAvatar={activeConversation.type === "group"}
+                        />
+                      </div>
+                    ))
+                  )}
+
+                  {/* LIVE TYPING BUBBLE (iOS 3-dot animation) */}
+                  {typingUsers.length > 0 && (
+                    <div className="flex items-center gap-2 px-4 py-1">
+                      <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-[#26252A] border border-white/10 text-white text-xs shadow-md">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce [animation-delay:0.2s]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce [animation-delay:0.4s]" />
+                        <span className="text-[11px] text-slate-400 font-medium ml-1.5">{typingUsers[0]} is typing...</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div ref={chatBottomRef} />
                 </div>
-              ) : (
-                messages.map((msg) => (
-                  <MessageBubble
-                    key={msg._id}
-                    message={msg}
-                    currentUserId={currentUserId}
-                    onReact={handleReact}
-                    onReply={(m) => setReplyTo({ id: m._id, senderName: m.senderName, text: m.text, mediaType: m.mediaType })}
-                    onEdit={handleEditMessage}
-                    onDelete={handleDeleteMessage}
-                    onTogglePin={handleTogglePin}
-                    onTriggerEffect={(eff) => setActiveEffect(eff)}
-                    showAvatar={activeConversation.type === "group"}
-                  />
-                ))
-              )}
+              </div>
 
-              {/* LIVE TYPING BUBBLE */}
-              {typingUsers.length > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2">
-                  <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-neutral-800/80 border border-white/10 text-neutral-400">
-                    <span className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce" />
-                    <span className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce [animation-delay:0.4s]" />
-                  </div>
+              {/* BOTTOM INPUT BAR */}
+              <MessageInputBar
+                onSendMessage={handleSendMessage}
+                replyTo={replyTo}
+                onClearReply={() => setReplyTo(null)}
+                onTyping={handleTyping}
+                currentDisappearingHours={activeConversation.disappearingHours || 0}
+                onSetDisappearingTimer={handleSetDisappearingTimer}
+                partnerName={activeConversation.name}
+              />
+            </>
+          ) : (
+            /* EMPTY STATE ON DESKTOP */
+            <div className="hidden md:flex flex-col items-center justify-center flex-1 h-full text-center p-6 space-y-4">
+              <div className="w-20 h-20 rounded-3xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shadow-lg">
+                <Shield size={40} />
+              </div>
+              <div className="max-w-md space-y-1.5">
+                <h3 className="text-lg font-bold text-white">iMessage Encrypted Chat</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Select a contact from the sidebar or click <strong>+</strong> to start an end-to-end encrypted private conversation.
+                </p>
+                <div className="pt-2 flex items-center justify-center gap-2 text-[11px] text-blue-400 font-mono font-medium">
+                  <Lock size={12} /> Disappearing Messages & E2EE Calling Enabled
                 </div>
-              )}
-
-              <div ref={chatBottomRef} />
+              </div>
             </div>
-
-            {/* BOTTOM INPUT BAR */}
-            <MessageInputBar
-              onSendMessage={handleSendMessage}
-              replyTo={replyTo}
-              onClearReply={() => setReplyTo(null)}
-              onTyping={handleTyping}
-              currentDisappearingHours={activeConversation.disappearingHours || 0}
-              onSetDisappearingTimer={handleSetDisappearingTimer}
-            />
-          </>
-        ) : (
-          /* EMPTY STATE */
-          <div className="hidden md:flex flex-col items-center justify-center flex-1 h-full text-center p-6 bg-neutral-950">
-            <div className="w-20 h-20 rounded-3xl bg-neutral-900 border border-white/10 flex items-center justify-center mb-4 text-blue-500 shadow-2xl">
-              <MessageSquare className="w-10 h-10" />
-            </div>
-            <h2 className="text-xl font-bold text-white">Select a Chat to Start Messaging</h2>
-            <p className="text-xs text-neutral-400 mt-1 max-w-sm">
-              Send encrypted texts, voice notes, photos, or full-screen fireworks effects.
-            </p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* 3. MODALS */}
@@ -578,12 +719,20 @@ export default function PrimeChatApp() {
           email: "",
           avatar: c.icon,
         })).filter((c) => c.userId)}
+        onOpenContacts={() => {
+          setIsGroupModalOpen(false);
+          setIsContactModalOpen(true);
+        }}
         onCreateGroup={handleCreateGroup}
       />
 
       <ContactModal
         isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
+        onClose={() => {
+          setIsContactModalOpen(false);
+          fetchContactsAndRequests();
+          fetchConversations();
+        }}
         onStartDirectChat={handleStartDirectChat}
       />
 

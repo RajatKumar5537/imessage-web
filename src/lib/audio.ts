@@ -1,12 +1,18 @@
 /**
- * iOS-grade Web Audio API Sound Effects Synthesizer
- * Provides authentic iMessage audio feedback (Swoosh, Pop, Tapback, Ringtone, Fireworks Crackle)
- * without requiring external asset files.
+ * iOS 18-grade Web Audio API Sound Effects Synthesizer
+ * Provides authentic Apple audio feedback:
+ * 1. Swoosh (Sent Message)
+ * 2. Tri-Tone / Note (Incoming Message & Notifications)
+ * 3. Tapback Reaction Pop
+ * 4. Fireworks Crackle & Explosion
+ * 5. Authentic iPhone "Marimba / Opening" Ringtone (Incoming Call)
  */
 
 class SoundEngine {
   private ctx: AudioContext | null = null;
   public enabled: boolean = true;
+  private ringInterval: any = null;
+  private ringTimeoutIds: any[] = [];
 
   private getContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
@@ -23,7 +29,42 @@ class SoundEngine {
   }
 
   /**
-   * iOS iMessage "Swoosh" Sent Sound
+   * Helper to synthesize an authentic Marimba / Wooden Bell note
+   */
+  private playMarimbaNote(freq: number, startTime: number, duration: number = 0.22) {
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      // Fundamental tone (Sine) + woody harmonic (Triangle)
+      osc1.type = "sine";
+      osc2.type = "triangle";
+
+      osc1.frequency.setValueAtTime(freq, startTime);
+      osc2.frequency.setValueAtTime(freq * 2.02, startTime); // overtone
+
+      // Marimba fast percussive attack & wooden decay envelope
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.28, startTime + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(startTime);
+      osc1.stop(startTime + duration);
+      osc2.start(startTime);
+      osc2.stop(startTime + duration);
+    } catch (_) {}
+  }
+
+  /**
+   * 1. iOS iMessage "Swoosh" Sent Sound
    */
   public playSent() {
     if (!this.enabled) return;
@@ -40,7 +81,7 @@ class SoundEngine {
       osc.frequency.setValueAtTime(440, now);
       osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
 
-      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.setValueAtTime(0.22, now);
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
 
       osc.connect(gain);
@@ -52,7 +93,7 @@ class SoundEngine {
   }
 
   /**
-   * iOS iMessage "Pop / Ding" Received Sound
+   * 2. iOS Authentic Tri-Tone Notification Chime (G#5 -> B5 -> E6)
    */
   public playReceived() {
     if (!this.enabled) return;
@@ -61,35 +102,48 @@ class SoundEngine {
       if (!ctx) return;
 
       const now = ctx.currentTime;
-      const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      const gain = ctx.createGain();
 
-      osc1.type = "sine";
-      osc2.type = "sine";
-
-      osc1.frequency.setValueAtTime(987.77, now); // B5
-      osc1.frequency.exponentialRampToValueAtTime(1318.51, now + 0.08); // E6
-
-      osc2.frequency.setValueAtTime(1318.51, now + 0.08);
-      osc2.frequency.exponentialRampToValueAtTime(1975.53, now + 0.22); // B6
-
-      gain.gain.setValueAtTime(0.25, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc1.start(now);
-      osc1.stop(now + 0.12);
-      osc2.start(now + 0.08);
-      osc2.stop(now + 0.35);
+      // Note 1: G#5
+      this.playBellNote(830.61, now, 0.14);
+      // Note 2: B5
+      this.playBellNote(987.77, now + 0.09, 0.14);
+      // Note 3: E6 (High resolved chime)
+      this.playBellNote(1318.51, now + 0.18, 0.38);
     } catch (_) {}
   }
 
   /**
-   * iOS Tapback Reaction Pop
+   * Alias for Notification chime
+   */
+  public playNotification() {
+    this.playReceived();
+  }
+
+  private playBellNote(freq: number, startTime: number, duration: number) {
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.3, startTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    } catch (_) {}
+  }
+
+  /**
+   * 3. iOS Tapback Reaction Pop
    */
   public playTapback() {
     if (!this.enabled) return;
@@ -117,7 +171,7 @@ class SoundEngine {
   }
 
   /**
-   * Fireworks Explosion Crackle Sound
+   * 4. Fireworks Explosion Crackle Sound
    */
   public playFireworksCrackle() {
     if (!this.enabled) return;
@@ -155,42 +209,46 @@ class SoundEngine {
   }
 
   /**
-   * Phone Call Ringing Tone (Continuous Loop)
+   * 5. Authentic iPhone Caller Ringtone (Marimba / Opening Melody Loop)
    */
-  private ringInterval: any = null;
-
   public startRingtone() {
     if (this.ringInterval) return;
-    const playRingPulse = () => {
+
+    const playIPhoneMelody = () => {
       try {
         const ctx = this.getContext();
         if (!ctx) return;
+
         const now = ctx.currentTime;
 
-        const osc1 = ctx.createOscillator();
-        const osc2 = ctx.createOscillator();
-        const gain = ctx.createGain();
+        // The iconic iPhone Marimba arpeggio notes
+        const melody = [
+          { f: 1046.5, t: 0.00 }, // C6
+          { f: 880.00, t: 0.12 }, // A5
+          { f: 698.46, t: 0.24 }, // F5
+          { f: 880.00, t: 0.36 }, // A5
+          { f: 1046.5, t: 0.48 }, // C6
+          { f: 880.00, t: 0.60 }, // A5
+          { f: 783.99, t: 0.72 }, // G5
+          { f: 659.25, t: 0.84 }, // E5
+          { f: 1046.5, t: 0.96 }, // C6
+          { f: 880.00, t: 1.08 }, // A5
+          { f: 698.46, t: 1.20 }, // F5
+          { f: 880.00, t: 1.32 }, // A5
+          { f: 1174.6, t: 1.44 }, // D6
+          { f: 1046.5, t: 1.56 }, // C6
+          { f: 880.00, t: 1.68 }, // A5
+          { f: 698.46, t: 1.80 }, // F5
+        ];
 
-        osc1.frequency.setValueAtTime(440, now);
-        osc2.frequency.setValueAtTime(480, now);
-
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.setValueAtTime(0.15, now + 1.2);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.4);
-
-        osc1.connect(gain);
-        osc2.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc1.start(now);
-        osc1.stop(now + 1.4);
-        osc2.start(now);
-        osc2.stop(now + 1.4);
+        melody.forEach(({ f, t }) => {
+          this.playMarimbaNote(f, now + t, 0.18);
+        });
       } catch (_) {}
     };
 
-    playRingPulse();
-    this.ringInterval = setInterval(playRingPulse, 3000);
+    playIPhoneMelody();
+    this.ringInterval = setInterval(playIPhoneMelody, 2800);
   }
 
   public stopRingtone() {
@@ -198,6 +256,8 @@ class SoundEngine {
       clearInterval(this.ringInterval);
       this.ringInterval = null;
     }
+    this.ringTimeoutIds.forEach((id) => clearTimeout(id));
+    this.ringTimeoutIds = [];
   }
 }
 

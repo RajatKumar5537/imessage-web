@@ -41,14 +41,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Conversation not found or unauthorized" }, { status: 403 });
     }
 
-    const messages = await Message.find({
-      conversationId,
-      clearedFor: { $ne: currentUserId },
-    })
-      .sort({ createdAt: 1 })
-      .lean();
-
-    // Mark unread messages as read
+    // Mark unread messages as read before querying so readBy reflects immediately
     await Message.updateMany(
       {
         conversationId,
@@ -59,11 +52,19 @@ export async function GET(req: Request) {
         $addToSet: {
           readBy: {
             userId: currentUserId,
+            userName: currentUser.name || "Recipient",
             readAt: new Date(),
           },
         },
       }
     );
+
+    const messages = await Message.find({
+      conversationId,
+      clearedFor: { $ne: currentUserId },
+    })
+      .sort({ createdAt: 1 })
+      .lean();
 
     // Decrypt messages
     const formatted = messages.map((msg: any) => {
