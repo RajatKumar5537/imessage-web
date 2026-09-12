@@ -17,11 +17,14 @@ export async function GET(req: Request) {
     }
 
     await dbConnect();
-    const currentUser = await User.findOne({ email: session.user.email.toLowerCase().trim() });
-    if (!currentUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    let currentUserId = (session.user as any).id;
+    if (!currentUserId) {
+      const currentUser = await User.findOne({ email: session.user.email.toLowerCase().trim() }).lean();
+      if (!currentUser) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      currentUserId = currentUser._id.toString();
     }
-    const currentUserId = currentUser._id.toString();
 
     const { searchParams } = new URL(req.url, "http://localhost:3000");
     const conversationId = searchParams.get("conversationId");
@@ -31,39 +34,43 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "conversationId is required" }, { status: 400 });
     }
 
-    // Verify user is in this conversation
+    // Verify user is in this conversation (lean projection)
     const conversation = await Conversation.findOne({
       _id: conversationId,
       participants: currentUserId,
-    });
+    })
+      .select("_id")
+      .lean();
 
     if (!conversation) {
       return NextResponse.json({ error: "Conversation not found or unauthorized" }, { status: 403 });
     }
 
-    // Mark unread messages as read before querying so readBy reflects immediately
-    await Message.updateMany(
-      {
-        conversationId,
-        senderId: { $ne: currentUserId },
-        "readBy.userId": { $ne: currentUserId },
-      },
-      {
-        $addToSet: {
-          readBy: {
-            userId: currentUserId,
-            userName: currentUser.name || "Recipient",
-            readAt: new Date(),
-          },
-        },
-      }
-    );
-
-    // Purge any expired disappearing messages
-    await Message.deleteMany({
+    // Fast indexed check: only execute write update if unread messages exist
+    const hasUnread = await Message.exists({
       conversationId,
-      expiresAt: { $ne: null, $lte: new Date() },
+      senderId: { $ne: currentUserId },
+      "readBy.userId": { $ne: currentUserId },
     });
+
+    if (hasUnread) {
+      await Message.updateMany(
+        {
+          conversationId,
+          senderId: { $ne: currentUserId },
+          "readBy.userId": { $ne: currentUserId },
+        },
+        {
+          $addToSet: {
+            readBy: {
+              userId: currentUserId,
+              userName: session.user?.name || "Recipient",
+              readAt: new Date(),
+            },
+          },
+        }
+      );
+    }
 
     const messages = await Message.find({
       conversationId,

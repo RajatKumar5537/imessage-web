@@ -43,20 +43,27 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await dbConnect();
-    const currentUser = await User.findOne({ email: session.user.email.toLowerCase().trim() });
-    if (!currentUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    let currentUserId = (session.user as any).id;
+    let userName = session.user.name || "User";
+    let userEmail = session.user.email || "";
+
+    if (!currentUserId) {
+      const currentUser = await User.findOne({ email: session.user.email.toLowerCase().trim() }).lean();
+      if (!currentUser) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      currentUserId = currentUser._id.toString();
+      userName = currentUser.name || userName;
+      userEmail = currentUser.email || userEmail;
     }
-    const currentUserId = currentUser._id.toString();
 
     const { activeConversationId, isTypingIn } = await req.json();
 
-    const presence = await Presence.findOneAndUpdate(
+    const presencePromise = Presence.findOneAndUpdate(
       { userId: currentUserId },
       {
-        userEmail: currentUser.email,
-        userName: currentUser.name,
+        userEmail,
+        userName,
         activeConversationId: activeConversationId || null,
         isTypingIn: isTypingIn || null,
         lastActiveAt: new Date(),
@@ -64,11 +71,12 @@ export async function POST(req: Request) {
       { upsert: true, new: true }
     );
 
-    // Also update User isOnline
-    await User.findByIdAndUpdate(currentUserId, {
+    const userPromise = User.findByIdAndUpdate(currentUserId, {
       isOnline: true,
       lastSeen: new Date(),
     });
+
+    const [presence] = await Promise.all([presencePromise, userPromise]);
 
     return NextResponse.json({ success: true, presence });
   } catch (error: any) {

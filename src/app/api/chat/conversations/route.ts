@@ -17,11 +17,14 @@ export async function GET() {
     }
 
     await dbConnect();
-    const currentUser = await User.findOne({ email: session.user.email.toLowerCase().trim() });
-    if (!currentUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    let currentUserId = (session.user as any).id;
+    if (!currentUserId) {
+      const currentUser = await User.findOne({ email: session.user.email.toLowerCase().trim() }).lean();
+      if (!currentUser) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      currentUserId = currentUser._id.toString();
     }
-    const currentUserId = currentUser._id.toString();
 
     // Fetch conversations where user is a participant
     const conversations = await Conversation.find({
@@ -31,118 +34,147 @@ export async function GET() {
       .sort({ updatedAt: -1 })
       .lean();
 
-    // Collect all participant user IDs to populate details
+    if (conversations.length === 0) {
+      return NextResponse.json([]);
+    }
+
+    const conversationIds = conversations.map((c) => c._id.toString());
+
+    // Batch 1: Collect participant details in 1 indexed query
     const allParticipantIds = Array.from(
       new Set(conversations.flatMap((c) => c.participants || []))
     );
-
-    const users = await User.find({ _id: { $in: allParticipantIds } }).select("name email avatar isOnline lastSeen statusMessage").lean();
+    const users = await User.find({ _id: { $in: allParticipantIds } })
+      .select("name email avatar isOnline lastSeen statusMessage")
+      .lean();
     const userMap = new Map(users.map((u) => [u._id.toString(), u]));
 
-    // Calculate unread messages count for each conversation
-    const detailedConversations = await Promise.all(
-      conversations.map(async (conv: any) => {
-        const otherParticipantIds = (conv.participants || []).filter((id: string) => id !== currentUserId);
-        const otherUsers = otherParticipantIds.map((id: string) => userMap.get(id)).filter(Boolean);
-
-        // Unread messages count (messages in conversation not sent by me and not in readBy)
-        const unreadCount = await Message.countDocuments({
-          conversationId: conv._id.toString(),
+    // Batch 2: Single aggregation for unread message counts across ALL conversations
+    const unreadAgg = await Message.aggregate([
+      {
+        $match: {
+          conversationId: { $in: conversationIds },
           senderId: { $ne: currentUserId },
           "readBy.userId": { $ne: currentUserId },
           clearedFor: { $ne: currentUserId },
           isDeleted: false,
-        });
+        },
+      },
+      {
+        $group: {
+          _id: "$conversationId",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+    const unreadMap = new Map(unreadAgg.map((item: any) => [item._id, item.count]));
 
-        // Determine title & avatar & lastSeen
-        let displayName = conv.name;
-        let displayAvatar = conv.icon;
-        let displayOnline = false;
-        let displayLastSeen: any = null;
-
-        if (conv.type === "direct") {
-          const peer = otherUsers[0];
-          displayName = peer ? peer.name : "Contact";
-          displayAvatar = peer ? peer.avatar : "";
-          displayLastSeen = peer?.lastSeen || null;
-          // Online if flagged online AND active within last 35 seconds
-          if (peer?.isOnline && peer?.lastSeen) {
-            const diff = Date.now() - new Date(peer.lastSeen).getTime();
-            displayOnline = diff < 35000;
-          } else {
-            displayOnline = Boolean(peer?.isOnline);
-          }
-        }
-
-        // Fetch the actual latest message document to reflect live isRead & text
-        const lastMsg = await Message.findOne({
-          conversationId: conv._id.toString(),
+    // Batch 3: Single aggregation for the latest message across ALL conversations
+    const latestMessagesAgg = await Message.aggregate([
+      {
+        $match: {
+          conversationId: { $in: conversationIds },
           clearedFor: { $ne: currentUserId },
-        })
-          .sort({ createdAt: -1 })
-          .lean();
+        },
+      },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: "$conversationId",
+          lastMsg: { $first: "$$ROOT" },
+        },
+      },
+    ]);
+    const latestMsgMap = new Map(latestMessagesAgg.map((item: any) => [item._id, item.lastMsg]));
 
-        let lastMessageData: any = null;
-        if (lastMsg) {
-          let plainText = "";
-          if (lastMsg.isDeleted) {
-            plainText = "This message was deleted";
-          } else if (lastMsg.mediaType && !lastMsg.content) {
-            plainText = `[${lastMsg.mediaType.toUpperCase()}] ${lastMsg.mediaName || ""}`;
-          } else {
-            try {
-              plainText = decryptMessage({
-                content: lastMsg.content,
-                iv: lastMsg.iv,
-                authTag: lastMsg.authTag,
-              });
-            } catch {
-              plainText = lastMsg.content || "";
-            }
+    // Assemble detailed conversations purely in-memory
+    const detailedConversations = conversations.map((conv: any) => {
+      const convId = conv._id.toString();
+      const otherParticipantIds = (conv.participants || []).filter((id: string) => id !== currentUserId);
+      const otherUsers = otherParticipantIds.map((id: string) => userMap.get(id)).filter(Boolean);
+      const unreadCount = unreadMap.get(convId) || 0;
+
+      // Determine title, avatar & presence
+      let displayName = conv.name;
+      let displayAvatar = conv.icon;
+      let displayOnline = false;
+      let displayLastSeen: any = null;
+
+      if (conv.type === "direct") {
+        const peer = otherUsers[0];
+        displayName = peer ? peer.name : "Contact";
+        displayAvatar = peer ? peer.avatar : "";
+        displayLastSeen = peer?.lastSeen || null;
+        if (peer?.isOnline && peer?.lastSeen) {
+          const diff = Date.now() - new Date(peer.lastSeen).getTime();
+          displayOnline = diff < 35000;
+        } else {
+          displayOnline = Boolean(peer?.isOnline);
+        }
+      }
+
+      const lastMsg = latestMsgMap.get(convId);
+      let lastMessageData: any = null;
+
+      if (lastMsg) {
+        let plainText = "";
+        if (lastMsg.isDeleted) {
+          plainText = "This message was deleted";
+        } else if (lastMsg.mediaType && !lastMsg.content) {
+          plainText = `[${lastMsg.mediaType.toUpperCase()}] ${lastMsg.mediaName || ""}`;
+        } else {
+          try {
+            plainText = decryptMessage({
+              content: lastMsg.content,
+              iv: lastMsg.iv,
+              authTag: lastMsg.authTag,
+            });
+          } catch {
+            plainText = lastMsg.content || "";
           }
-
-          const isMe = lastMsg.senderId === currentUserId;
-          const isRead = (lastMsg.readBy || []).length > 0;
-          const readAt = lastMsg.readBy?.[0]?.readAt || null;
-
-          lastMessageData = {
-            text: plainText,
-            senderId: lastMsg.senderId,
-            senderName: lastMsg.senderName,
-            isMe,
-            isRead,
-            readAt,
-            createdAt: lastMsg.createdAt,
-            mediaType: lastMsg.mediaType || null,
-            effect: lastMsg.effect || null,
-          };
-        } else if (conv.lastMessage?.text) {
-          lastMessageData = {
-            ...conv.lastMessage,
-            text: decryptField(conv.lastMessage.text),
-            isMe: conv.lastMessage.senderId === currentUserId,
-            isRead: false,
-          };
         }
 
-        return {
-          _id: conv._id.toString(),
-          type: conv.type,
-          name: displayName,
-          icon: displayAvatar,
-          participants: conv.participants,
-          participantDetails: (conv.participants || []).map((id: string) => userMap.get(id)).filter(Boolean),
-          admins: conv.admins || [],
-          isPinned: (conv.isPinnedBy || []).includes(currentUserId),
-          disappearingHours: conv.disappearingHours || 0,
-          lastMessage: lastMessageData,
-          unreadCount,
-          isOnline: displayOnline,
-          lastSeen: displayLastSeen,
-          updatedAt: conv.updatedAt,
+        const isMe = lastMsg.senderId === currentUserId;
+        const isRead = (lastMsg.readBy || []).length > 0;
+        const readAt = lastMsg.readBy?.[0]?.readAt || null;
+
+        lastMessageData = {
+          text: plainText,
+          senderId: lastMsg.senderId,
+          senderName: lastMsg.senderName,
+          isMe,
+          isRead,
+          readAt,
+          createdAt: lastMsg.createdAt,
+          mediaType: lastMsg.mediaType || null,
+          effect: lastMsg.effect || null,
         };
-      })
-    );
+      } else if (conv.lastMessage?.text) {
+        lastMessageData = {
+          ...conv.lastMessage,
+          text: decryptField(conv.lastMessage.text),
+          isMe: conv.lastMessage.senderId === currentUserId,
+          isRead: false,
+        };
+      }
+
+      return {
+        _id: convId,
+        type: conv.type,
+        name: displayName,
+        icon: displayAvatar,
+        participants: conv.participants,
+        participantDetails: (conv.participants || []).map((id: string) => userMap.get(id)).filter(Boolean),
+        admins: conv.admins || [],
+        isPinned: (conv.isPinnedBy || []).includes(currentUserId),
+        disappearingHours: conv.disappearingHours || 0,
+        lastMessage: lastMessageData,
+        unreadCount,
+        isOnline: displayOnline,
+        lastSeen: displayLastSeen,
+        updatedAt: conv.updatedAt,
+      };
+    });
 
     return NextResponse.json(detailedConversations);
   } catch (error: any) {

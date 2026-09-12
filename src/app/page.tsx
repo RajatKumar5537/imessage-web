@@ -71,10 +71,14 @@ export default function PrimeChatApp() {
   const prevMessagesCountRef = useRef(0);
   const prevTotalUnreadRef = useRef<number | null>(null);
   const playedEffectIdsRef = useRef<Set<string>>(new Set());
+  const isFetchingMessagesRef = useRef(false);
+  const isFetchingConversationsRef = useRef(false);
 
   // 1. Fetch Conversations
   const fetchConversations = async () => {
     if (status !== "authenticated") return;
+    if (isFetchingConversationsRef.current) return;
+    isFetchingConversationsRef.current = true;
     try {
       const res = await fetch("/api/chat/conversations");
       if (res.ok) {
@@ -91,6 +95,8 @@ export default function PrimeChatApp() {
       }
     } catch (err) {
       console.error("Error fetching conversations:", err);
+    } finally {
+      isFetchingConversationsRef.current = false;
     }
   };
 
@@ -122,6 +128,8 @@ export default function PrimeChatApp() {
   // 3. Fetch Messages for Active Conversation
   const fetchMessages = async (convId: string, isInitial = false, forceScroll = false) => {
     if (!convId) return;
+    if (isFetchingMessagesRef.current && !isInitial && !forceScroll) return;
+    isFetchingMessagesRef.current = true;
     try {
       const res = await fetch(`/api/chat/messages?conversationId=${convId}`);
       if (res.ok) {
@@ -176,9 +184,6 @@ export default function PrimeChatApp() {
         }
 
         // Scroll logic:
-        // - Always scroll on initial load or if explicitly forced (e.g. after sending)
-        // - If new messages arrive, only scroll if the user is already near the bottom or if the user sent it
-        // - DO NOT scroll during regular 2-second background poll when user is reading older messages
         if (isInitial || forceScroll) {
           setTimeout(() => {
             chatBottomRef.current?.scrollIntoView({ behavior: isInitial ? "auto" : "smooth" });
@@ -198,44 +203,12 @@ export default function PrimeChatApp() {
       }
     } catch (err) {
       console.error("Error fetching messages:", err);
+    } finally {
+      isFetchingMessagesRef.current = false;
     }
   };
 
-  // 4. Poll Presence & Calls
-  const checkPresenceAndCalls = async () => {
-    if (status !== "authenticated") return;
-    try {
-      // Send heartbeat
-      await fetch("/api/chat/presence", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          activeConversationId,
-        }),
-      });
-
-      // Check active calls
-      const callRes = await fetch("/api/chat/call");
-      if (callRes.ok) {
-        const callData = await callRes.json();
-        setActiveCall(callData);
-      }
-
-      // Check typing indicator in active room
-      if (activeConversationId) {
-        const presenceRes = await fetch(`/api/chat/presence?conversationId=${activeConversationId}`);
-        if (presenceRes.ok) {
-          const presences = await presenceRes.json();
-          const typing = presences
-            .filter((p: any) => p.userId !== currentUserId && p.isTypingIn === activeConversationId)
-            .map((p: any) => p.userName);
-          setTypingUsers(typing);
-        }
-      }
-    } catch (_) {}
-  };
-
-  // 5. Initial Data Load & Polling Loops
+  // 4. Initial Data Load
   useEffect(() => {
     if (status === "authenticated") {
       fetchConversations();
@@ -250,21 +223,74 @@ export default function PrimeChatApp() {
     }
   }, [activeConversationId]);
 
-  // Real-time interval loop
+  // 5. Adaptive Sequential Message & Typing Poller (1000ms loop, zero request pileup)
+  useEffect(() => {
+    if (status !== "authenticated" || !activeConversationId) return;
+
+    let isCancelled = false;
+    let timerId: any = null;
+
+    const pollActiveChat = async () => {
+      if (isCancelled) return;
+      await fetchMessages(activeConversationId);
+
+      // Typing status in active conversation
+      try {
+        const presenceRes = await fetch(`/api/chat/presence?conversationId=${activeConversationId}`);
+        if (presenceRes.ok && !isCancelled) {
+          const presences = await presenceRes.json();
+          const typing = presences
+            .filter((p: any) => p.userId !== currentUserId && p.isTypingIn === activeConversationId)
+            .map((p: any) => p.userName);
+          setTypingUsers(typing);
+        }
+      } catch (_) {}
+
+      if (!isCancelled) {
+        timerId = setTimeout(pollActiveChat, 1100);
+      }
+    };
+
+    timerId = setTimeout(pollActiveChat, 1100);
+
+    return () => {
+      isCancelled = true;
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [status, activeConversationId, currentUserId]);
+
+  // 6. Sidebar Conversations Poller (every 3s)
   useEffect(() => {
     if (status !== "authenticated") return;
-
     const interval = setInterval(() => {
       fetchConversations();
-      fetchContactsAndRequests();
-      if (activeConversationId) {
-        fetchMessages(activeConversationId);
-      }
-      checkPresenceAndCalls();
-    }, 2000);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [status]);
 
+  // 7. Presence Heartbeat Poller (every 20s)
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const sendHeartbeat = () => {
+      fetch("/api/chat/presence", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activeConversationId }),
+      }).catch(() => {});
+    };
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 20000);
     return () => clearInterval(interval);
   }, [status, activeConversationId]);
+
+  // 8. Contacts & Requests Poller (every 30s)
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const interval = setInterval(() => {
+      fetchContactsAndRequests();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [status]);
 
   // Dedicated rapid call signaling poller (600ms during ringing/call, 1000ms idle)
   useEffect(() => {
@@ -321,6 +347,43 @@ export default function PrimeChatApp() {
       setActiveEffect(msgData.effect);
     }
 
+    soundEngine.playSent();
+
+    // Optimistic message insertion (0ms lag)
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg: MessageProps = {
+      _id: tempId,
+      conversationId: activeConversationId,
+      senderId: currentUserId,
+      senderName: session?.user?.name || "You",
+      senderAvatar: session?.user?.image || "",
+      isMe: true,
+      text: msgData.text || "",
+      mediaData: msgData.mediaData || null,
+      mediaType: msgData.mediaType || null,
+      mediaName: msgData.mediaName || null,
+      effect: msgData.effect || null,
+      createdAt: new Date().toISOString(),
+      reactions: [],
+      isPinned: false,
+      replyTo: replyTo
+        ? {
+            id: replyTo._id,
+            senderName: replyTo.senderName,
+            text: replyTo.text,
+            mediaType: replyTo.mediaType || undefined,
+          }
+        : undefined,
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setReplyTo(null);
+
+    // Scroll to bottom immediately
+    setTimeout(() => {
+      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 30);
+
     try {
       const res = await fetch("/api/chat/messages", {
         method: "POST",
@@ -332,9 +395,11 @@ export default function PrimeChatApp() {
       });
 
       if (res.ok) {
-        fetchMessages(activeConversationId, false, true);
+        const savedMsg = await res.json();
+        setMessages((prev) =>
+          prev.map((m) => (m._id === tempId ? { ...savedMsg, isMe: true } : m))
+        );
         fetchConversations();
-        setReplyTo(null);
       }
     } catch (err) {
       console.error("Failed to send message:", err);

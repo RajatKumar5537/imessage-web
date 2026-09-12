@@ -119,6 +119,9 @@ const MessageSchema = new Schema(
 );
 
 MessageSchema.index({ conversationId: 1, createdAt: 1 });
+MessageSchema.index({ conversationId: 1, createdAt: -1 });
+MessageSchema.index({ conversationId: 1, senderId: 1, "readBy.userId": 1 });
+MessageSchema.index({ conversationId: 1, clearedFor: 1 });
 MessageSchema.index({ conversationId: 1, isPinned: 1 });
 
 if (models.PrimeMessage) {

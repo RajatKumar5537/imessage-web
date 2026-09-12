@@ -68,6 +68,7 @@ const ConversationSchema = new Schema(
 );
 
 ConversationSchema.index({ updatedAt: -1 });
+ConversationSchema.index({ participants: 1, updatedAt: -1 });
 
 if (models.PrimeConversation) {
   delete (models as any).PrimeConversation;
