@@ -174,10 +174,10 @@ export default function ProfileSettingsModal({
               </div>
             </div>
 
-            {/* Email (Apple ID) */}
+            {/* Email (Account) */}
             <div>
               <label className="text-xs font-semibold text-neutral-400 block mb-1.5">
-                Registered Apple ID
+                Registered Email Address
               </label>
               <div className="flex items-center gap-3 px-4 py-3 bg-white/[0.02] border border-white/5 rounded-2xl text-neutral-400 text-xs font-mono">
                 <Shield className="w-4 h-4 text-neutral-500 flex-shrink-0" />

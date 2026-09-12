@@ -164,7 +164,7 @@ export default function LoginPage() {
 
           {/* Email Address */}
           <div className="login-field">
-            <label className="login-label">Apple ID / Email</label>
+            <label className="login-label">Email Address</label>
             <div className="login-glass-input-wrap">
               <Mail className="login-field-icon" />
               <input
@@ -198,22 +198,27 @@ export default function LoginPage() {
           <button type="submit" disabled={loading} className="login-action-btn">
             {loading ? (
               <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>{isRegister ? "Creating Account..." : "Signing in..."}</span>
+                <span className="login-spinner" />
+                <span>{isRegister ? "Creating account..." : "Signing in..."}</span>
               </span>
             ) : (
-              <span className="flex items-center gap-2">
-                <span>{isRegister ? "Sign Up & Launch" : "Sign In to iMessage"}</span>
+              <span className="flex items-center gap-1.5">
+                <span>{isRegister ? "Create Free Account" : "Sign In"}</span>
                 <ArrowRight className="w-4 h-4" />
               </span>
             )}
           </button>
         </form>
 
-        {/* Advanced Privacy Footer */}
-        <div className="login-security-footer">
-          <ShieldCheck className="w-3.5 h-3.5 text-blue-400/90" />
-          <span>AES-256-GCM Encrypted • WebRTC Calling</span>
+        {/* Security & Disclaimer Footer */}
+        <div className="login-footer">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-neutral-400 mb-1">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>AES-256-GCM Encrypted • WebRTC Calling</span>
+          </div>
+          <p className="text-[10px] text-neutral-500 text-center">
+            Portfolio Demo Project. Not affiliated with Apple Inc.
+          </p>
         </div>
       </div>
 
