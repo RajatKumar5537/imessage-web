@@ -185,15 +185,42 @@ export async function POST(req: Request) {
     // Automatic keyword effect triggers if none provided
     let resolvedEffect = effect || null;
     if (!resolvedEffect && rawText) {
-      const lower = rawText.toLowerCase();
-      if (lower.includes("happy new year") || lower.includes("congratulations") || lower.includes("congrats")) {
+      const lower = rawText.toLowerCase().trim();
+      if (lower.includes("happy new year") || lower.includes("congratulations") || lower.includes("congrats") || lower.includes("fireworks")) {
         resolvedEffect = "fireworks";
-      } else if (lower.includes("happy birthday") || lower.includes("hbd")) {
+      } else if (lower.includes("happy birthday") || lower.includes("hbd") || lower.includes("birthday")) {
         resolvedEffect = "balloons";
-      } else if (lower.includes("celebrate") || lower.includes("party") || lower.includes("woohoo")) {
+      } else if (lower.includes("celebrate") || lower.includes("party") || lower.includes("woohoo") || lower.includes("confetti")) {
         resolvedEffect = "confetti";
-      } else if (lower.includes("i love you") || lower.includes("love you") || lower.includes("tingu")) {
+      } else if (lower.includes("i love you") || lower.includes("love you") || lower.includes("i love u") || lower.includes("love u") || lower === "❤️" || lower === "💕" || lower.includes("tingu")) {
         resolvedEffect = "love";
+      } else if (
+        lower.includes("good morning") ||
+        lower.includes("goodmorning") ||
+        lower.includes("rise and shine") ||
+        lower.includes("shubh prabhat") ||
+        lower.includes("subh prabhat") ||
+        lower === "gm" ||
+        lower === "morning" ||
+        lower === "morning!" ||
+        lower.startsWith("gm ") ||
+        lower.endsWith(" gm")
+      ) {
+        resolvedEffect = "good_morning";
+      } else if (
+        lower.includes("good night") ||
+        lower.includes("goodnight") ||
+        lower.includes("sweet dreams") ||
+        lower.includes("nighty night") ||
+        lower.includes("shubh ratri") ||
+        lower.includes("subh ratri") ||
+        lower === "gn" ||
+        lower === "night" ||
+        lower === "night!" ||
+        lower.startsWith("gn ") ||
+        lower.endsWith(" gn")
+      ) {
+        resolvedEffect = "good_night";
       }
     }
 

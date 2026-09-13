@@ -37,7 +37,7 @@ export interface MessageProps {
   senderAvatar?: string;
   isMe: boolean;
   text: string;
-  effect?: "fireworks" | "balloons" | "confetti" | "lasers" | "love" | "shooting_star" | "invisible_ink" | "slam" | "loud" | "gentle" | null;
+  effect?: "fireworks" | "balloons" | "confetti" | "lasers" | "love" | "shooting_star" | "good_morning" | "good_night" | "invisible_ink" | "slam" | "loud" | "gentle" | null;
   mediaType?: "image" | "video" | "audio" | "file" | null;
   mediaData?: string | null;
   mediaName?: string | null;

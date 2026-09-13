@@ -13,6 +13,8 @@ import {
   PartyPopper,
   EyeOff,
   Zap,
+  Sun,
+  Moon,
   X,
 } from "lucide-react";
 
@@ -72,6 +74,8 @@ export default function ActionDrawer({
 
   const effectsList = [
     { id: "fireworks", label: "Fireworks 🎆", icon: Flame, color: "from-red-500 to-amber-500", desc: "Exploding colorful firework burst" },
+    { id: "good_morning", label: "Sunrise ☀️", icon: Sun, color: "from-amber-400 to-yellow-500", desc: "Golden morning sunrise" },
+    { id: "good_night", label: "Good Night 🌙", icon: Moon, color: "from-indigo-500 to-purple-600", desc: "Starry night with crescent moon" },
     { id: "balloons", label: "Balloons 🎈", icon: Sparkles, color: "from-blue-500 to-cyan-400", desc: "Floating festive helium balloons" },
     { id: "confetti", label: "Confetti 🎉", icon: PartyPopper, color: "from-purple-500 to-pink-500", desc: "Glittering celebration cascade" },
     { id: "love", label: "Hearts ❤️", icon: Heart, color: "from-rose-500 to-pink-600", desc: "Surging pulse of 3D floating hearts" },

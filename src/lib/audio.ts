@@ -319,6 +319,50 @@ class SoundEngine {
     this.stopRingtone();
     this.stopCallingTone();
   }
+
+  /**
+   * 7. Uplifting Morning Sunrise Chime (C5 -> E5 -> G5 -> B5 -> E6)
+   */
+  public playMorningChime() {
+    if (!this.enabled) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const notes = [
+        { f: 523.25, t: 0.00, d: 0.35 }, // C5
+        { f: 659.25, t: 0.12, d: 0.35 }, // E5
+        { f: 783.99, t: 0.24, d: 0.40 }, // G5
+        { f: 987.77, t: 0.36, d: 0.45 }, // B5
+        { f: 1318.51, t: 0.48, d: 0.95 }, // E6 golden resonant chime
+      ];
+      notes.forEach(({ f, t, d }) => {
+        this.playBellNote(f, now + t, d);
+      });
+    } catch (_) {}
+  }
+
+  /**
+   * 8. Serene Bedtime Starry Night Lullaby Chime (E6 -> C#6 -> B5 -> G#5 -> E5)
+   */
+  public playNightChime() {
+    if (!this.enabled) return;
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const notes = [
+        { f: 1318.51, t: 0.00, d: 0.45 }, // E6
+        { f: 1108.73, t: 0.18, d: 0.45 }, // C#6
+        { f: 987.77, t: 0.36, d: 0.50 },  // B5
+        { f: 830.61, t: 0.54, d: 0.55 },  // G#5
+        { f: 659.25, t: 0.72, d: 1.20 },  // E5 warm deep peace
+      ];
+      notes.forEach(({ f, t, d }) => {
+        this.playBellNote(f, now + t, d);
+      });
+    } catch (_) {}
+  }
 }
 
 export const soundEngine = new SoundEngine();

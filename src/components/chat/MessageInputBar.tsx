@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Plus, Mic, ArrowUp, X, Sparkles, Smile, Flame, Heart, PartyPopper, Zap, EyeOff } from "lucide-react";
+import { Plus, Mic, ArrowUp, X, Sparkles, Smile, Flame, Heart, PartyPopper, Zap, EyeOff, Sun, Moon } from "lucide-react";
 import ActionDrawer from "./ActionDrawer";
 import VoiceMemoRecorder from "./VoiceMemoRecorder";
 import { soundEngine } from "@/lib/audio";
@@ -27,6 +27,8 @@ interface MessageInputBarProps {
 
 const SCREEN_EFFECTS = [
   { id: "fireworks", label: "Fireworks 🎆", icon: Flame, color: "from-amber-500 to-red-500", desc: "Exploding colorful fireworks" },
+  { id: "good_morning", label: "Sunrise ☀️", icon: Sun, color: "from-amber-400 to-yellow-500", desc: "Golden morning sunrise" },
+  { id: "good_night", label: "Good Night 🌙", icon: Moon, color: "from-indigo-500 to-purple-600", desc: "Starry night with crescent moon" },
   { id: "balloons", label: "Balloons 🎈", icon: Sparkles, color: "from-blue-500 to-cyan-400", desc: "Floating helium balloons" },
   { id: "confetti", label: "Confetti 🎉", icon: PartyPopper, color: "from-purple-500 to-pink-500", desc: "Celebration cascade" },
   { id: "love", label: "Hearts ❤️", icon: Heart, color: "from-rose-500 to-pink-600", desc: "Floating 3D hearts" },
@@ -165,6 +167,35 @@ export default function MessageInputBar({
       lower === "💕"
     ) {
       return "love";
+    }
+    if (
+      lower.includes("good morning") ||
+      lower.includes("goodmorning") ||
+      lower.includes("rise and shine") ||
+      lower.includes("shubh prabhat") ||
+      lower.includes("subh prabhat") ||
+      lower === "gm" ||
+      lower === "morning" ||
+      lower === "morning!" ||
+      lower.startsWith("gm ") ||
+      lower.endsWith(" gm")
+    ) {
+      return "good_morning";
+    }
+    if (
+      lower.includes("good night") ||
+      lower.includes("goodnight") ||
+      lower.includes("sweet dreams") ||
+      lower.includes("nighty night") ||
+      lower.includes("shubh ratri") ||
+      lower.includes("subh ratri") ||
+      lower === "gn" ||
+      lower === "night" ||
+      lower === "night!" ||
+      lower.startsWith("gn ") ||
+      lower.endsWith(" gn")
+    ) {
+      return "good_night";
     }
     if (lower.includes("pew pew") || lower.includes("lasers") || lower === "pew") {
       return "lasers";

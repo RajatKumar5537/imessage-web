@@ -44,7 +44,7 @@ const MessageSchema = new Schema(
     },
     effect: {
       type: String,
-      enum: ["fireworks", "balloons", "confetti", "lasers", "love", "shooting_star", "invisible_ink", "slam", "loud", "gentle", null],
+      enum: ["fireworks", "balloons", "confetti", "lasers", "love", "shooting_star", "good_morning", "good_night", "invisible_ink", "slam", "loud", "gentle", null],
       default: null,
     },
     mediaType: {

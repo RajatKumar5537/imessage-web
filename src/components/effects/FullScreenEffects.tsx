@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from "react";
 import { soundEngine } from "@/lib/audio";
 
 interface FullScreenEffectsProps {
-  effect: "fireworks" | "balloons" | "confetti" | "lasers" | "love" | "shooting_star" | null;
+  effect: "fireworks" | "balloons" | "confetti" | "lasers" | "love" | "shooting_star" | "good_morning" | "good_night" | null;
   onComplete?: () => void;
 }
 
@@ -46,6 +46,10 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     // Play sound
     if (effect === "fireworks") {
       soundEngine.playFireworksCrackle();
+    } else if (effect === "good_morning") {
+      soundEngine.playMorningChime();
+    } else if (effect === "good_night") {
+      soundEngine.playNightChime();
     } else {
       soundEngine.playTapback();
     }
@@ -714,7 +718,413 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       render();
     }
 
-    // Auto dismiss after 8s for fireworks (7-10 seconds as requested) and 7s for others
+    /* -------------------------------------------------------------
+       7. GOOD MORNING / SUNRISE ENGINE (Radiant Sun, Golden Beams & Morning Dew)
+       ------------------------------------------------------------- */
+    else if (effect === "good_morning") {
+      let time = 0;
+      const startTime = performance.now();
+      const totalDuration = 8000;
+
+      let sunY = height * 0.95;
+      const targetSunY = height * 0.44;
+      const sunX = width * 0.5;
+      const sunRadius = Math.max(38, Math.min(width, height) * 0.13);
+
+      // Shimmering morning motes / golden sun dust
+      const moteCount = Math.max(25, Math.min(50, Math.floor(width / 20)));
+      const motes = Array.from({ length: moteCount }).map(() => ({
+        x: Math.random() * width,
+        y: height * 0.4 + Math.random() * height * 0.7,
+        vx: (Math.random() - 0.5) * 0.6,
+        vy: -(Math.random() * 1.6 + 0.8),
+        size: Math.random() * 3 + 1.2,
+        alpha: Math.random() * 0.7 + 0.3,
+        phase: Math.random() * Math.PI * 2,
+        color: Math.random() > 0.4 ? "#FFE082" : (Math.random() > 0.5 ? "#FFD54F" : "#FFFFFF"),
+      }));
+
+      // Morning birds soaring across the horizon
+      const birds = [
+        { x: width * 0.15, y: height * 0.38, vx: 1.4, vy: -0.15, size: 7, phase: 0 },
+        { x: width * 0.22, y: height * 0.42, vx: 1.3, vy: -0.12, size: 5.5, phase: 1.2 },
+        { x: width * 0.29, y: height * 0.35, vx: 1.45, vy: -0.18, size: 6, phase: 2.4 },
+      ];
+
+      const render = () => {
+        if (!isRunning || !ctx) return;
+        ctx.clearRect(0, 0, width, height);
+
+        const elapsed = performance.now() - startTime;
+        time += 0.03;
+
+        // Smooth master opacity envelope: fade in over 800ms, fade out over last 1200ms
+        let masterAlpha = 1;
+        if (elapsed < 800) {
+          masterAlpha = elapsed / 800;
+        } else if (elapsed > totalDuration - 1200) {
+          masterAlpha = Math.max(0, (totalDuration - elapsed) / 1200);
+        }
+
+        ctx.save();
+        ctx.globalAlpha = masterAlpha;
+
+        // Smoothly rise the sun towards target height
+        sunY += (targetSunY - sunY) * 0.032;
+
+        // 1. Warm Radiant Sunrise Ambient Sky Bloom
+        const skyGlow = ctx.createRadialGradient(
+          sunX,
+          sunY,
+          sunRadius * 0.2,
+          sunX,
+          sunY,
+          Math.max(width, height) * 0.95
+        );
+        skyGlow.addColorStop(0, "rgba(255, 255, 255, 0.45)");
+        skyGlow.addColorStop(0.18, "rgba(255, 224, 130, 0.35)");
+        skyGlow.addColorStop(0.42, "rgba(255, 152, 0, 0.22)");
+        skyGlow.addColorStop(0.75, "rgba(255, 87, 34, 0.12)");
+        skyGlow.addColorStop(1, "rgba(255, 112, 67, 0)");
+        ctx.fillStyle = skyGlow;
+        ctx.fillRect(0, 0, width, height);
+
+        // 2. Rotating Radiant Golden Coronal Sunbeams
+        const rayCount = 14;
+        const maxRayLen = Math.max(width, height) * 1.5;
+        for (let i = 0; i < rayCount; i++) {
+          const baseAngle = (i / rayCount) * Math.PI * 2 + time * 0.15;
+          const raySpan = ((Math.PI * 2) / rayCount) * 0.42;
+          const pulseAlpha = 0.15 + Math.sin(time * 2.2 + i * 0.8) * 0.06;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(sunX, sunY);
+          ctx.arc(sunX, sunY, maxRayLen, baseAngle - raySpan / 2, baseAngle + raySpan / 2);
+          ctx.closePath();
+
+          const rayGrad = ctx.createRadialGradient(sunX, sunY, sunRadius, sunX, sunY, maxRayLen);
+          rayGrad.addColorStop(0, `rgba(255, 235, 59, ${pulseAlpha * 1.5})`);
+          rayGrad.addColorStop(0.35, `rgba(255, 193, 7, ${pulseAlpha})`);
+          rayGrad.addColorStop(0.8, `rgba(255, 152, 0, ${pulseAlpha * 0.3})`);
+          rayGrad.addColorStop(1, "rgba(255, 152, 0, 0)");
+
+          ctx.fillStyle = rayGrad;
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // 3. Hero Sun Core (Luminous multi-layered orb)
+        // Outer corona pulse
+        const coronaRadius = sunRadius * (1.35 + Math.sin(time * 3) * 0.06);
+        const coronaGrad = ctx.createRadialGradient(sunX, sunY, sunRadius * 0.5, sunX, sunY, coronaRadius);
+        coronaGrad.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+        coronaGrad.addColorStop(0.5, "rgba(255, 235, 59, 0.6)");
+        coronaGrad.addColorStop(0.85, "rgba(255, 152, 0, 0.25)");
+        coronaGrad.addColorStop(1, "rgba(255, 152, 0, 0)");
+        ctx.fillStyle = coronaGrad;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, coronaRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Solid brilliant solar disk
+        const sunGrad = ctx.createRadialGradient(sunX, sunY - sunRadius * 0.2, sunRadius * 0.1, sunX, sunY, sunRadius);
+        sunGrad.addColorStop(0, "#FFFFFF");
+        sunGrad.addColorStop(0.3, "#FFF9C4");
+        sunGrad.addColorStop(0.7, "#FFD54F");
+        sunGrad.addColorStop(1, "#FF9800");
+        ctx.fillStyle = sunGrad;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4. Cinematic Solar Lens Flares
+        const flares = [
+          { dist: 0.35, r: 16, color: "rgba(255, 255, 255, 0.28)" },
+          { dist: 0.65, r: 28, color: "rgba(255, 215, 64, 0.18)" },
+          { dist: 0.95, r: 45, color: "rgba(255, 171, 64, 0.12)" },
+        ];
+        const flareDx = width * 0.25;
+        const flareDy = height * 0.28;
+        flares.forEach((fl) => {
+          ctx.beginPath();
+          ctx.arc(sunX - flareDx * fl.dist, sunY - flareDy * fl.dist, fl.r, 0, Math.PI * 2);
+          ctx.fillStyle = fl.color;
+          ctx.fill();
+        });
+
+        // 5. Floating Morning Dew / Sunlight Motes
+        for (const m of motes) {
+          m.y += m.vy;
+          m.phase += 0.04;
+          m.x += m.vx + Math.sin(m.phase) * 0.7;
+
+          if (m.y < -20) {
+            m.y = height + 10;
+            m.x = Math.random() * width;
+          }
+
+          const shimmer = m.alpha * (0.65 + Math.sin(time * 4 + m.phase) * 0.35);
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, shimmer * masterAlpha);
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2);
+          ctx.fillStyle = m.color;
+          ctx.shadowColor = "#FFD700";
+          ctx.shadowBlur = 8;
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // 6. Graceful Morning Bird Silhouettes
+        ctx.fillStyle = "rgba(45, 25, 10, 0.68)";
+        for (const b of birds) {
+          b.x += b.vx;
+          b.y += b.vy;
+          b.phase += 0.15;
+          const flap = Math.sin(b.phase) * 3.5;
+
+          ctx.save();
+          ctx.translate(b.x, b.y);
+          ctx.beginPath();
+          ctx.moveTo(-b.size, flap);
+          ctx.quadraticCurveTo(-b.size * 0.5, -b.size * 0.8 + flap * 0.5, 0, 0);
+          ctx.quadraticCurveTo(b.size * 0.5, -b.size * 0.8 + flap * 0.5, b.size, flap);
+          ctx.quadraticCurveTo(b.size * 0.4, 1, 0, 0);
+          ctx.quadraticCurveTo(-b.size * 0.4, 1, -b.size, flap);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.restore();
+
+        if (isRunning) {
+          animationFrameId = requestAnimationFrame(render);
+        }
+      };
+
+      render();
+    }
+
+    /* -------------------------------------------------------------
+       8. GOOD NIGHT / CELESTIAL STARRY NIGHT (Crescent Moon, Constellations & Stardust)
+       ------------------------------------------------------------- */
+    else if (effect === "good_night") {
+      let time = 0;
+      const startTime = performance.now();
+      const totalDuration = 8000;
+
+      // Celestial Crescent Moon
+      const moonX = width * 0.5;
+      let moonY = height * 0.65;
+      const targetMoonY = height * 0.32;
+      const moonRadius = Math.max(42, Math.min(width, height) * 0.13);
+
+      // Starfield (twinkling diamonds across the night sky)
+      const starCount = Math.max(60, Math.min(130, Math.floor(width / 8)));
+      const stars = Array.from({ length: starCount }).map(() => ({
+        x: Math.random() * width,
+        y: Math.random() * height * 0.88,
+        size: Math.random() * 2.2 + 0.8,
+        baseAlpha: Math.random() * 0.55 + 0.35,
+        freq: Math.random() * 2.5 + 1.2,
+        phase: Math.random() * Math.PI * 2,
+        color: Math.random() > 0.4 ? "#FFFFFF" : (Math.random() > 0.5 ? "#E0E7FF" : "#FEF08A"),
+        isSparkle: Math.random() > 0.75,
+      }));
+
+      // Drifting Night Stardust / Fireflies
+      const stardustCount = 32;
+      const stardust = Array.from({ length: stardustCount }).map(() => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: -(Math.random() * 0.6 + 0.2),
+        size: Math.random() * 2.5 + 1.0,
+        alpha: Math.random() * 0.6 + 0.2,
+        phase: Math.random() * Math.PI * 2,
+      }));
+
+      // Periodic Shooting Star
+      let shootingStar: { x: number; y: number; vx: number; vy: number; len: number; active: boolean } | null = null;
+      timeoutIds.push(
+        setTimeout(() => {
+          shootingStar = { x: width * 0.15, y: height * 0.12, vx: 9.5, vy: 4.8, len: 90, active: true };
+        }, 1600)
+      );
+      timeoutIds.push(
+        setTimeout(() => {
+          shootingStar = { x: width * 0.45, y: height * 0.08, vx: 10.5, vy: 5.2, len: 100, active: true };
+        }, 4400)
+      );
+
+      const render = () => {
+        if (!isRunning || !ctx) return;
+        ctx.clearRect(0, 0, width, height);
+
+        const elapsed = performance.now() - startTime;
+        time += 0.03;
+
+        // Smooth master opacity envelope
+        let masterAlpha = 1;
+        if (elapsed < 800) {
+          masterAlpha = elapsed / 800;
+        } else if (elapsed > totalDuration - 1200) {
+          masterAlpha = Math.max(0, (totalDuration - elapsed) / 1200);
+        }
+
+        ctx.save();
+        ctx.globalAlpha = masterAlpha;
+
+        // Moon smooth glide
+        moonY += (targetMoonY - moonY) * 0.03;
+
+        // 1. Deep Celestial Midnight Indigo & Royal Violet Sky Tint
+        const nightSky = ctx.createLinearGradient(0, 0, 0, height);
+        nightSky.addColorStop(0, "rgba(10, 10, 28, 0.65)");
+        nightSky.addColorStop(0.5, "rgba(22, 17, 48, 0.55)");
+        nightSky.addColorStop(1, "rgba(15, 23, 42, 0.45)");
+        ctx.fillStyle = nightSky;
+        ctx.fillRect(0, 0, width, height);
+
+        // 2. Twinkling Diamond Starfield
+        for (const s of stars) {
+          const twinkle = s.baseAlpha * (0.6 + 0.4 * Math.sin(time * s.freq + s.phase));
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, Math.min(1, twinkle * masterAlpha));
+          ctx.fillStyle = s.color;
+
+          if (s.isSparkle) {
+            // 4-Point Diamond Sparkle Star
+            const arm = s.size * 2.2;
+            ctx.beginPath();
+            ctx.moveTo(s.x, s.y - arm);
+            ctx.quadraticCurveTo(s.x, s.y, s.x + arm, s.y);
+            ctx.quadraticCurveTo(s.x, s.y, s.x, s.y + arm);
+            ctx.quadraticCurveTo(s.x, s.y, s.x - arm, s.y);
+            ctx.quadraticCurveTo(s.x, s.y, s.x, s.y - arm);
+            ctx.fill();
+          } else {
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        // 3. Shooting Star Streak
+        if (shootingStar && shootingStar.active) {
+          shootingStar.x += shootingStar.vx;
+          shootingStar.y += shootingStar.vy;
+
+          ctx.save();
+          const starGrad = ctx.createLinearGradient(
+            shootingStar.x - (shootingStar.vx / 10) * shootingStar.len,
+            shootingStar.y - (shootingStar.vy / 10) * shootingStar.len,
+            shootingStar.x,
+            shootingStar.y
+          );
+          starGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+          starGrad.addColorStop(0.7, "rgba(254, 240, 138, 0.6)");
+          starGrad.addColorStop(1, "rgba(255, 255, 255, 0.95)");
+
+          ctx.strokeStyle = starGrad;
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(
+            shootingStar.x - (shootingStar.vx / 10) * shootingStar.len,
+            shootingStar.y - (shootingStar.vy / 10) * shootingStar.len
+          );
+          ctx.lineTo(shootingStar.x, shootingStar.y);
+          ctx.stroke();
+
+          // Spark head
+          ctx.fillStyle = "#FFFFFF";
+          ctx.beginPath();
+          ctx.arc(shootingStar.x, shootingStar.y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          if (shootingStar.x > width + 100 || shootingStar.y > height + 100) {
+            shootingStar.active = false;
+          }
+        }
+
+        // 4. Luminous Crescent Moon Halo
+        const moonGlow = ctx.createRadialGradient(moonX, moonY, moonRadius * 0.4, moonX, moonY, moonRadius * 2.4);
+        moonGlow.addColorStop(0, "rgba(254, 240, 138, 0.42)");
+        moonGlow.addColorStop(0.35, "rgba(199, 210, 254, 0.22)");
+        moonGlow.addColorStop(0.75, "rgba(99, 102, 241, 0.08)");
+        moonGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = moonGlow;
+        ctx.beginPath();
+        ctx.arc(moonX, moonY, moonRadius * 2.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 5. Authentic 3D Crescent Moon Path
+        ctx.save();
+        ctx.translate(moonX, moonY);
+        ctx.rotate(-0.25 + Math.sin(time * 0.8) * 0.03);
+
+        ctx.beginPath();
+        // Outer arc
+        ctx.arc(0, 0, moonRadius, -Math.PI * 0.45, Math.PI * 0.55, false);
+        // Inner cutout arc
+        ctx.arc(-moonRadius * 0.45, -moonRadius * 0.08, moonRadius * 0.85, Math.PI * 0.52, -Math.PI * 0.42, true);
+        ctx.closePath();
+
+        // Shimmering Golden-Pearl Moon Gradient
+        const moonGrad = ctx.createLinearGradient(-moonRadius * 0.5, -moonRadius, moonRadius, moonRadius);
+        moonGrad.addColorStop(0, "#FFFFFF");
+        moonGrad.addColorStop(0.4, "#FEF9C3");
+        moonGrad.addColorStop(0.75, "#FDE047");
+        moonGrad.addColorStop(1, "#EAB308");
+        ctx.fillStyle = moonGrad;
+        ctx.shadowColor = "#FEF08A";
+        ctx.shadowBlur = 18;
+        ctx.fill();
+
+        // Lunar Gloss Specular Edge
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.restore();
+
+        // 6. Floating Night Stardust / Fireflies
+        for (const dust of stardust) {
+          dust.y += dust.vy;
+          dust.phase += 0.03;
+          dust.x += dust.vx + Math.sin(dust.phase) * 0.5;
+
+          if (dust.y < -10) {
+            dust.y = height + 10;
+            dust.x = Math.random() * width;
+          }
+
+          const glow = dust.alpha * (0.6 + Math.sin(time * 3 + dust.phase) * 0.4);
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, glow * masterAlpha);
+          ctx.beginPath();
+          ctx.arc(dust.x, dust.y, dust.size, 0, Math.PI * 2);
+          ctx.fillStyle = "#A5B4FC";
+          ctx.shadowColor = "#818CF8";
+          ctx.shadowBlur = 6;
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.restore();
+
+        if (isRunning) {
+          animationFrameId = requestAnimationFrame(render);
+        }
+      };
+
+      render();
+    }
+
+    // Auto dismiss after 8s for fireworks, good_morning, and good_night (7-8s as requested) and 7s for others
     const handleDismiss = () => {
       isRunning = false;
       clearTimeout(timer);
@@ -726,7 +1136,8 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
       }
     };
 
-    const effectDuration = effect === "fireworks" ? 8000 : 7000;
+    const effectDuration =
+      effect === "fireworks" || effect === "good_morning" || effect === "good_night" ? 8000 : 7000;
     const timer = setTimeout(handleDismiss, effectDuration);
 
     const handleKeyDown = (e: KeyboardEvent) => {
