@@ -9,7 +9,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       navigator.serviceWorker
         .register("/sw.js")
         .then((reg) => {
-          // Service Worker registered successfully
+          // Force check for updates on each launch
+          reg.update();
         })
         .catch((err) => {
           console.warn("ServiceWorker registration notice:", err);
