@@ -208,32 +208,32 @@ export default function ChatHeader({
         <button
           type="button"
           onClick={onStartAudioCall}
-          className="p-2 sm:px-3.5 sm:py-2 rounded-xl bg-white/[0.07] border border-white/10 hover:bg-[#30D158]/20 text-slate-200 hover:text-[#30D158] text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer"
+          className="h-8 px-2.5 sm:px-3 rounded-full bg-white/[0.08] hover:bg-[#30D158]/20 border border-white/10 hover:border-[#30D158]/40 text-slate-200 hover:text-[#30D158] transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer group"
           title="Start Encrypted Audio Call"
         >
-          <Phone className="w-4 h-4 text-[#30D158]" />
-          <span className="hidden sm:inline">Audio</span>
+          <Phone className="w-3.5 h-3.5 text-[#30D158] transition-transform group-hover:scale-110 flex-shrink-0" />
+          <span className="hidden sm:inline text-xs font-semibold tracking-tight text-white/90 group-hover:text-white leading-none">Audio</span>
         </button>
 
         {/* Video Call Pill */}
         <button
           type="button"
           onClick={onStartVideoCall}
-          className="p-2 sm:px-3.5 sm:py-2 rounded-xl bg-white/[0.07] border border-white/10 hover:bg-blue-500/20 text-slate-200 hover:text-blue-400 text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 active:scale-95 cursor-pointer"
+          className="h-8 px-2.5 sm:px-3 rounded-full bg-white/[0.08] hover:bg-blue-500/20 border border-white/10 hover:border-blue-500/40 text-slate-200 hover:text-blue-400 transition-all shadow-sm flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer group"
           title="Start Encrypted Video Call"
         >
-          <Video className="w-4 h-4 text-blue-400" />
-          <span className="hidden sm:inline">Video</span>
+          <Video className="w-3.5 h-3.5 text-blue-400 transition-transform group-hover:scale-110 flex-shrink-0" />
+          <span className="hidden sm:inline text-xs font-semibold tracking-tight text-white/90 group-hover:text-white leading-none">Video</span>
         </button>
 
         {/* Search Conversation */}
         <button
           type="button"
           onClick={onOpenSearch}
-          className="p-2 rounded-xl bg-white/[0.07] border border-white/10 hover:bg-white/15 text-slate-300 hover:text-white transition-all cursor-pointer hidden md:flex active:scale-95"
+          className="w-8 h-8 rounded-full bg-white/[0.08] border border-white/10 hover:bg-white/15 text-slate-300 hover:text-white transition-all cursor-pointer hidden md:flex items-center justify-center active:scale-95 shadow-sm"
           title="Search messages"
         >
-          <Search className="w-4 h-4" />
+          <Search className="w-3.5 h-3.5" />
         </button>
 
         {/* Dropdown Options */}
@@ -241,10 +241,10 @@ export default function ChatHeader({
           <button
             type="button"
             onClick={() => setShowDropdown(!showDropdown)}
-            className="p-2 rounded-xl bg-white/[0.07] border border-white/10 hover:bg-white/15 text-slate-300 hover:text-white transition-all cursor-pointer active:scale-95"
+            className="w-8 h-8 rounded-full bg-white/[0.08] border border-white/10 hover:bg-white/15 text-slate-300 hover:text-white transition-all cursor-pointer flex items-center justify-center active:scale-95 shadow-sm"
             title="Options"
           >
-            <MoreVertical className="w-4 h-4" />
+            <MoreVertical className="w-3.5 h-3.5" />
           </button>
 
           {showDropdown && (
@@ -316,10 +316,10 @@ export default function ChatHeader({
           <button
             type="button"
             onClick={onCloseChat}
-            className="p-2 rounded-xl bg-white/[0.07] border border-white/10 hover:bg-red-500/20 text-slate-300 hover:text-red-400 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
+            className="w-8 h-8 rounded-full bg-white/[0.08] border border-white/10 hover:bg-red-500/20 text-slate-300 hover:text-red-400 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
             title="Close chat"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         )}
       </div>
