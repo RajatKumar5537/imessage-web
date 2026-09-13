@@ -54,6 +54,27 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="iMessage" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#09090b" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                function setAppHeight() {
+                  var h = window.innerHeight;
+                  if (window.visualViewport && window.visualViewport.height) {
+                    h = Math.min(window.innerHeight, window.visualViewport.height);
+                  }
+                  document.documentElement.style.setProperty('--app-height', h + 'px');
+                }
+                setAppHeight();
+                window.addEventListener('resize', setAppHeight, { passive: true });
+                window.addEventListener('orientationchange', setAppHeight, { passive: true });
+                if (window.visualViewport) {
+                  window.visualViewport.addEventListener('resize', setAppHeight, { passive: true });
+                }
+              })();
+            `,
+          }}
+        />
       </head>
       <body className="antialiased bg-neutral-950 text-white h-full w-full overflow-hidden select-none">
         <Providers>{children}</Providers>

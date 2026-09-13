@@ -96,15 +96,41 @@ export default function PrimeChatApp() {
     }
   };
 
-  // Lock window scroll on mobile/iOS standalone PWA so header never gets pushed off-screen
+  // Dynamic Viewport Height & Window Scroll Lock for Mobile (iPhone Standalone PWA + Android)
   useEffect(() => {
+    const updateAppHeight = () => {
+      if (typeof window === "undefined") return;
+      let h = window.innerHeight;
+      if (window.visualViewport && window.visualViewport.height) {
+        h = Math.min(window.innerHeight, window.visualViewport.height);
+      }
+      document.documentElement.style.setProperty("--app-height", `${h}px`);
+    };
+
+    updateAppHeight();
+    window.addEventListener("resize", updateAppHeight, { passive: true });
+    window.addEventListener("orientationchange", updateAppHeight, { passive: true });
+    window.addEventListener("focus", updateAppHeight, { passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", updateAppHeight, { passive: true });
+    }
+
     const handleWindowScroll = () => {
       if (typeof window !== "undefined" && (window.scrollY !== 0 || window.scrollX !== 0)) {
         window.scrollTo(0, 0);
       }
     };
     window.addEventListener("scroll", handleWindowScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleWindowScroll);
+
+    return () => {
+      window.removeEventListener("resize", updateAppHeight);
+      window.removeEventListener("orientationchange", updateAppHeight);
+      window.removeEventListener("focus", updateAppHeight);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", updateAppHeight);
+      }
+      window.removeEventListener("scroll", handleWindowScroll);
+    };
   }, []);
 
   // 1. Fetch Conversations
@@ -759,7 +785,10 @@ export default function PrimeChatApp() {
 
   if (status === "loading" || status === "unauthenticated") {
     return (
-      <div className="h-full w-full flex items-center justify-center bg-[#020205] text-white">
+      <div
+        style={{ height: "var(--app-height, 100%)", maxHeight: "var(--app-height, 100%)" }}
+        className="h-full w-full flex items-center justify-center bg-[#020205] text-white"
+      >
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/40 text-blue-400 animate-pulse flex items-center justify-center shadow-lg">
             <Shield className="w-6 h-6" />
@@ -771,7 +800,10 @@ export default function PrimeChatApp() {
   }
 
   return (
-    <div className="fixed inset-0 w-full h-full flex items-center justify-center bg-[#000000] text-white p-0 sm:p-2 md:p-3 overflow-hidden select-none font-sans">
+    <div
+      style={{ height: "var(--app-height, 100%)", maxHeight: "var(--app-height, 100%)" }}
+      className="fixed inset-0 w-full flex items-center justify-center bg-[#000000] text-white p-0 sm:p-2 md:p-3 overflow-hidden select-none font-sans"
+    >
       {/* 🎆 FULL SCREEN PARTICLES / FIREWORKS ENGINE */}
       <FullScreenEffects
         effect={activeEffect}
@@ -779,7 +811,10 @@ export default function PrimeChatApp() {
       />
 
       {/* MAIN OBSIDIAN CONTAINER CARD */}
-      <div className="w-full h-full sm:max-h-[96vh] sm:max-w-[1440px] bg-[#0A0A0C]/98 backdrop-blur-2xl border-0 sm:border border-white/10 sm:rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_40px_rgba(0,122,255,0.1)] flex flex-row overflow-hidden relative">
+      <div
+        style={{ height: "var(--app-height, 100%)", maxHeight: "var(--app-height, 100%)" }}
+        className="w-full h-full sm:max-h-[96vh] sm:max-w-[1440px] bg-[#0A0A0C]/98 backdrop-blur-2xl border-0 sm:border border-white/10 sm:rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95),0_0_40px_rgba(0,122,255,0.1)] flex flex-row overflow-hidden relative"
+      >
         {/* 1. LEFT SIDEBAR: CONVERSATION LIST */}
         <div
           className={`${

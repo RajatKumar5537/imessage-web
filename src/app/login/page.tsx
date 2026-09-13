@@ -297,14 +297,17 @@ export default function LoginPage() {
           right: 0;
           bottom: 0;
           width: 100vw;
-          height: 100dvh;
+          height: 100%;
+          height: -webkit-fill-available;
+          height: var(--app-height, 100%);
+          max-height: var(--app-height, 100%);
           overflow-y: auto;
           overflow-x: hidden;
           background: #000000;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 16px;
+          padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)) 16px;
           box-sizing: border-box;
           font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
             system-ui, sans-serif;

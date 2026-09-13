@@ -682,8 +682,8 @@ export default function CallModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl bg-neutral-900 border-0 sm:border border-white/15 rounded-none sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+        style={{ height: "var(--app-height, 100%)" }}
+        className="relative w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-2xl bg-neutral-900 border-0 sm:border border-white/15 rounded-none sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       >
         {/* TOP BAR */}
         <div className="p-4 flex items-center justify-between border-b border-white/10 z-10">
