@@ -127,7 +127,7 @@ export default function ChatHeader({
   };
 
   return (
-    <header className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 border-b border-white/10 bg-[#070712]/95 backdrop-blur-xl z-30 select-none transition-colors">
+    <header className="flex items-center justify-between px-3 sm:px-5 pt-[max(0.625rem,env(safe-area-inset-top))] pb-2.5 sm:pb-3 border-b border-white/10 bg-[#070712]/95 backdrop-blur-xl z-30 select-none transition-colors flex-shrink-0">
       {/* LEFT: PARTNER AVATAR, NAME & STATUS */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile Back Button */}

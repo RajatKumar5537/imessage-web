@@ -85,6 +85,28 @@ export default function PrimeChatApp() {
   const isFetchingMessagesRef = useRef(false);
   const isFetchingConversationsRef = useRef(false);
 
+  // Dedicated container scroll function - never triggers window scroll (fixes iOS PWA standalone bug)
+  const scrollToBottom = (behavior: "auto" | "smooth" = "smooth") => {
+    if (chatContainerRef.current) {
+      const { scrollHeight, clientHeight } = chatContainerRef.current;
+      chatContainerRef.current.scrollTo({
+        top: scrollHeight - clientHeight,
+        behavior,
+      });
+    }
+  };
+
+  // Lock window scroll on mobile/iOS standalone PWA so header never gets pushed off-screen
+  useEffect(() => {
+    const handleWindowScroll = () => {
+      if (typeof window !== "undefined" && (window.scrollY !== 0 || window.scrollX !== 0)) {
+        window.scrollTo(0, 0);
+      }
+    };
+    window.addEventListener("scroll", handleWindowScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleWindowScroll);
+  }, []);
+
   // 1. Fetch Conversations
   const fetchConversations = async (force = false) => {
     if (status !== "authenticated") return;
@@ -198,11 +220,11 @@ export default function PrimeChatApp() {
         // Scroll logic:
         if (isInitial || forceScroll) {
           setTimeout(() => {
-            chatBottomRef.current?.scrollIntoView({ behavior: isInitial ? "auto" : "smooth" });
+            scrollToBottom(isInitial ? "auto" : "smooth");
           }, 60);
         } else if (hasNewMessages) {
           setTimeout(() => {
-            chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+            scrollToBottom("smooth");
           }, 60);
         }
       }
@@ -413,7 +435,7 @@ export default function PrimeChatApp() {
 
     // Scroll to bottom immediately
     setTimeout(() => {
-      chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      scrollToBottom("smooth");
     }, 30);
 
     try {
@@ -522,9 +544,13 @@ export default function PrimeChatApp() {
 
   const handleJumpToMessage = (messageId: string) => {
     if (!messageId) return;
+    const container = chatContainerRef.current;
     const targetEl = document.getElementById(`chat-msg-${messageId}`) || document.getElementById(messageId);
-    if (targetEl) {
-      targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (container && targetEl) {
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      const targetTop = targetRect.top - containerRect.top + container.scrollTop - (containerRect.height / 2);
+      container.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
       setHighlightedMessageId(messageId);
       setTimeout(() => {
         setHighlightedMessageId((prev) => (prev === messageId ? null : prev));
@@ -733,7 +759,7 @@ export default function PrimeChatApp() {
 
   if (status === "loading" || status === "unauthenticated") {
     return (
-      <div className="h-[100dvh] w-full flex items-center justify-center bg-[#020205] text-white">
+      <div className="h-full w-full flex items-center justify-center bg-[#020205] text-white">
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/40 text-blue-400 animate-pulse flex items-center justify-center shadow-lg">
             <Shield className="w-6 h-6" />
@@ -745,7 +771,7 @@ export default function PrimeChatApp() {
   }
 
   return (
-    <div className="h-[100dvh] w-full flex items-center justify-center bg-[#000000] text-white p-0 sm:p-2 md:p-3 overflow-hidden select-none relative font-sans">
+    <div className="h-full w-full flex items-center justify-center bg-[#000000] text-white p-0 sm:p-2 md:p-3 overflow-hidden select-none relative font-sans">
       {/* 🎆 FULL SCREEN PARTICLES / FIREWORKS ENGINE */}
       <FullScreenEffects
         effect={activeEffect}

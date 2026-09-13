@@ -56,7 +56,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#09090b" />
       </head>
-      <body className="antialiased bg-neutral-950 text-white min-h-[100dvh] h-[100dvh] w-full overflow-hidden select-none">
+      <body className="antialiased bg-neutral-950 text-white h-full w-full overflow-hidden select-none">
         <Providers>{children}</Providers>
       </body>
     </html>
