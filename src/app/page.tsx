@@ -367,11 +367,11 @@ export default function PrimeChatApp() {
           const callData = await callRes.json();
           setActiveCall((prev: any) => {
             if (!callData) {
-              if (prev) soundEngine.stopRingtone();
+              if (prev) soundEngine.stopAllTones();
               return null;
             }
             if (callData.status === "declined" || callData.status === "ended") {
-              soundEngine.stopRingtone();
+              soundEngine.stopAllTones();
               return null;
             }
             return callData;
@@ -740,7 +740,7 @@ export default function PrimeChatApp() {
 
   const handleAcceptCall = async () => {
     if (!activeCall) return;
-    soundEngine.stopRingtone();
+    soundEngine.stopAllTones();
     const callId = activeCall._id;
     setActiveCall((prev: any) => ({ ...prev, status: "accepted" }));
     try {
@@ -757,7 +757,7 @@ export default function PrimeChatApp() {
 
   const handleDeclineCall = async () => {
     if (!activeCall) return;
-    soundEngine.stopRingtone();
+    soundEngine.stopAllTones();
     const callId = activeCall._id;
     setActiveCall(null);
     try {
@@ -774,7 +774,7 @@ export default function PrimeChatApp() {
 
   const handleEndCall = async () => {
     if (!activeCall) return;
-    soundEngine.stopRingtone();
+    soundEngine.stopAllTones();
     const callId = activeCall._id;
     setActiveCall(null);
     try {

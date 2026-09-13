@@ -48,7 +48,20 @@ const RTC_CONFIG: RTCConfiguration = {
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun3.l.google.com:19302" },
     { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:stun.cloudflare.com:3478" },
+    { urls: "stun:stun.services.mozilla.com:3478" },
+    // Public high-speed TURN relay servers for NAT / Cellular traversal
+    {
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443",
+        "turn:openrelay.metered.ca:443?transport=tcp",
+      ],
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 // Resilient media stream requester with secure-context check & legacy fallback
@@ -61,13 +74,24 @@ async function requestUserMedia(callType: "audio" | "video"): Promise<MediaStrea
   if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === "function") {
     try {
       return await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: callType === "video",
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        video: callType === "video" ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false,
       });
     } catch (videoErr) {
       console.warn("Video getUserMedia failed, attempting audio-only:", videoErr);
       try {
-        return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        return await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+          video: false,
+        });
       } catch (audioErr) {
         console.warn("Audio getUserMedia failed:", audioErr);
         return null;
@@ -145,17 +169,21 @@ export default function CallModal({
   const peerName = isCaller ? call.recipientName : call.callerName;
   const peerAvatar = isCaller ? call.recipientAvatar : call.callerAvatar;
 
-  // Sound ringtone
+  // Sound ringtones: outgoing calling tone for caller, incoming marimba ringtone for recipient
   useEffect(() => {
     if (call.status === "ringing") {
-      soundEngine.startRingtone();
+      if (isOutgoing) {
+        soundEngine.startCallingTone();
+      } else if (isIncoming) {
+        soundEngine.startRingtone();
+      }
     } else {
-      soundEngine.stopRingtone();
+      soundEngine.stopAllTones();
     }
     return () => {
-      soundEngine.stopRingtone();
+      soundEngine.stopAllTones();
     };
-  }, [call.status]);
+  }, [call.status, isOutgoing, isIncoming]);
 
   // Duration timer when connected
   useEffect(() => {
@@ -186,7 +214,10 @@ export default function CallModal({
       if (el.srcObject !== remoteStreamRef.current) {
         el.srcObject = remoteStreamRef.current;
       }
-      el.play().catch(() => {});
+      el.play().catch(() => {
+        el.muted = true;
+        el.play().catch(() => {});
+      });
     }
   }, []);
 
@@ -202,7 +233,7 @@ export default function CallModal({
 
   // Cleanup helper
   const cleanupMedia = useCallback(() => {
-    soundEngine.stopRingtone();
+    soundEngine.stopAllTones();
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((t) => t.stop());
       localStreamRef.current = null;
@@ -238,9 +269,36 @@ export default function CallModal({
         });
       }
 
+      // Ensure transceivers exist for both audio and video
+      if (typeof pc.getTransceivers === "function") {
+        const transceivers = pc.getTransceivers();
+        const hasAudio = transceivers.some((t) => t.receiver.track.kind === "audio");
+        const hasVideo = transceivers.some((t) => t.receiver.track.kind === "video");
+        if (!hasAudio) {
+          pc.addTransceiver("audio", { direction: "sendrecv" });
+        }
+        if (!hasVideo && call.callType === "video") {
+          pc.addTransceiver("video", { direction: "sendrecv" });
+        }
+      }
+
+      // Monitor ICE connection state & auto-recover if disconnected or failed
+      pc.oniceconnectionstatechange = () => {
+        if (
+          (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") &&
+          typeof (pc as any).restartIce === "function"
+        ) {
+          try {
+            (pc as any).restartIce();
+          } catch (_) {}
+        }
+      };
+
       // Local ICE candidate generated -> send to signaling server
       pc.onicecandidate = (event) => {
         if (event.candidate) {
+          const candJSON = event.candidate.toJSON ? event.candidate.toJSON() : event.candidate;
+          if (!candJSON || !candJSON.candidate) return;
           fetch("/api/chat/call", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -248,9 +306,7 @@ export default function CallModal({
               action: "candidate",
               callId: call._id,
               isCaller,
-              candidate: JSON.stringify(
-                event.candidate.toJSON ? event.candidate.toJSON() : event.candidate
-              ),
+              candidate: JSON.stringify(candJSON),
             }),
           }).catch(() => {});
         }
@@ -258,32 +314,48 @@ export default function CallModal({
 
       // Remote track arrived
       pc.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-          const remoteStream = event.streams[0];
+        let remoteStream = remoteStreamRef.current;
+        if (!remoteStream) {
+          remoteStream = event.streams && event.streams[0] ? event.streams[0] : new MediaStream();
           remoteStreamRef.current = remoteStream;
           setRemoteStreamState(remoteStream);
+        }
 
-          if (event.track.kind === "video") {
-            setHasRemoteVideo(true);
-            event.track.onmute = () => setHasRemoteVideo(false);
-            event.track.onunmute = () => setHasRemoteVideo(true);
-            event.track.onended = () => setHasRemoteVideo(false);
-          }
+        if (!remoteStream.getTracks().some((t) => t.id === event.track.id)) {
+          remoteStream.addTrack(event.track);
+        }
 
-          if (remoteVideoRef.current) {
+        if (event.track.kind === "video") {
+          setHasRemoteVideo(true);
+          event.track.onended = () => {
+            const hasLive = remoteStream?.getVideoTracks().some((t) => t.readyState === "live");
+            setHasRemoteVideo(!!hasLive);
+          };
+        }
+
+        if (remoteVideoRef.current) {
+          if (remoteVideoRef.current.srcObject !== remoteStream) {
             remoteVideoRef.current.srcObject = remoteStream;
-            remoteVideoRef.current.play().catch(() => {});
           }
-          if (remoteAudioRef.current) {
+          remoteVideoRef.current.play().catch(() => {
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.muted = true;
+              remoteVideoRef.current.play().catch(() => {});
+            }
+          });
+        }
+
+        if (remoteAudioRef.current) {
+          if (remoteAudioRef.current.srcObject !== remoteStream) {
             remoteAudioRef.current.srcObject = remoteStream;
-            remoteAudioRef.current.play().catch(() => {});
           }
+          remoteAudioRef.current.play().catch(() => {});
         }
       };
 
       return pc;
     },
-    [call._id, isCaller]
+    [call._id, call.callType, isCaller]
   );
 
   // 1. Caller workflow: acquire camera/mic, create SDP offer & send to DB
@@ -392,7 +464,13 @@ export default function CallModal({
         // Drain queued ICE candidates
         while (iceCandidatesQueueRef.current.length > 0) {
           const cand = iceCandidatesQueueRef.current.shift();
-          if (cand) await pc.addIceCandidate(new RTCIceCandidate(cand));
+          if (cand) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(cand));
+            } catch (e) {
+              console.warn("Error adding queued candidate:", e);
+            }
+          }
         }
 
         const answer = await pc.createAnswer();
@@ -451,7 +529,13 @@ export default function CallModal({
 
             while (iceCandidatesQueueRef.current.length > 0) {
               const cand = iceCandidatesQueueRef.current.shift();
-              if (cand) await pc.addIceCandidate(new RTCIceCandidate(cand));
+              if (cand) {
+                try {
+                  await pc.addIceCandidate(new RTCIceCandidate(cand));
+                } catch (e) {
+                  console.warn("Error adding queued candidate:", e);
+                }
+              }
             }
           } catch (e) {
             console.error("Caller setRemoteDescription error:", e);
@@ -467,7 +551,13 @@ export default function CallModal({
 
             while (iceCandidatesQueueRef.current.length > 0) {
               const cand = iceCandidatesQueueRef.current.shift();
-              if (cand) await pc.addIceCandidate(new RTCIceCandidate(cand));
+              if (cand) {
+                try {
+                  await pc.addIceCandidate(new RTCIceCandidate(cand));
+                } catch (e) {
+                  console.warn("Error adding queued candidate:", e);
+                }
+              }
             }
 
             const answer = await pc.createAnswer();
@@ -497,7 +587,7 @@ export default function CallModal({
           processedCandidatesRef.current.add(candStr);
           try {
             const candObj = JSON.parse(candStr);
-            if (hasRemoteDescRef.current && pcRef.current) {
+            if (hasRemoteDescRef.current && pcRef.current && pcRef.current.remoteDescription) {
               await pcRef.current.addIceCandidate(new RTCIceCandidate(candObj));
             } else {
               iceCandidatesQueueRef.current.push(candObj);
@@ -660,7 +750,21 @@ export default function CallModal({
           </div>
         )}
 
-        <audio ref={bindRemoteAudio} autoPlay playsInline className="hidden" />
+        <audio
+          ref={bindRemoteAudio}
+          autoPlay
+          playsInline
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            top: -9999,
+            left: -9999,
+            width: "1px",
+            height: "1px",
+            opacity: 0.001,
+            pointerEvents: "none",
+          }}
+        />
 
         <div className="flex items-center justify-between text-xs text-neutral-400 font-mono">
           <span>{formatDuration(callSeconds)}</span>
@@ -745,8 +849,22 @@ export default function CallModal({
             />
           )}
 
-          {/* Hidden Remote Audio Player */}
-          <audio ref={bindRemoteAudio} autoPlay playsInline className="hidden" />
+          {/* Off-screen Remote Audio Player (must not be display:none for iOS Safari/Mobile playback) */}
+          <audio
+            ref={bindRemoteAudio}
+            autoPlay
+            playsInline
+            aria-hidden="true"
+            style={{
+              position: "fixed",
+              top: -9999,
+              left: -9999,
+              width: "1px",
+              height: "1px",
+              opacity: 0.001,
+              pointerEvents: "none",
+            }}
+          />
 
           {/* Avatar / Placeholder view when video not receiving or call is audio */}
           {(!hasRemoteVideo || !isConnected || call.callType === "audio") && (
@@ -822,7 +940,13 @@ export default function CallModal({
               <button
                 type="button"
                 onClick={() => {
-                  soundEngine.stopRingtone();
+                  soundEngine.stopAllTones();
+                  if (remoteAudioRef.current) {
+                    remoteAudioRef.current.play().catch(() => {});
+                  }
+                  if (remoteVideoRef.current) {
+                    remoteVideoRef.current.play().catch(() => {});
+                  }
                   onAcceptCall();
                   startRecipientSession();
                 }}

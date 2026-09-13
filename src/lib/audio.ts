@@ -13,6 +13,7 @@ class SoundEngine {
   public enabled: boolean = true;
   private ringInterval: any = null;
   private ringTimeoutIds: any[] = [];
+  private callingToneInterval: any = null;
 
   private getContext(): AudioContext | null {
     if (typeof window === "undefined") return null;
@@ -258,6 +259,65 @@ class SoundEngine {
     }
     this.ringTimeoutIds.forEach((id) => clearTimeout(id));
     this.ringTimeoutIds = [];
+    this.stopCallingTone();
+  }
+
+  /**
+   * 6. Outgoing Calling Tone (Played to the CALLER while waiting for recipient to answer)
+   * Authentic dual-frequency ringback pulse (440Hz + 480Hz) with smooth fade envelope
+   */
+  public startCallingTone() {
+    if (this.callingToneInterval) return;
+
+    const playCallingPulse = () => {
+      try {
+        const ctx = this.getContext();
+        if (!ctx) return;
+
+        const now = ctx.currentTime;
+        const duration = 1.6; // 1.6s ringback tone
+
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        // Classic international ringback frequencies
+        osc1.type = "sine";
+        osc2.type = "sine";
+        osc1.frequency.setValueAtTime(440, now);
+        osc2.frequency.setValueAtTime(480, now);
+
+        // Smooth fade-in and fade-out envelope to ensure pleasant acoustics
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.08);
+        gain.gain.setValueAtTime(0.12, now + duration - 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc1.start(now);
+        osc1.stop(now + duration);
+        osc2.start(now);
+        osc2.stop(now + duration);
+      } catch (_) {}
+    };
+
+    playCallingPulse();
+    this.callingToneInterval = setInterval(playCallingPulse, 4000); // 1.6s ring + 2.4s pause = 4s cycle
+  }
+
+  public stopCallingTone() {
+    if (this.callingToneInterval) {
+      clearInterval(this.callingToneInterval);
+      this.callingToneInterval = null;
+    }
+  }
+
+  public stopAllTones() {
+    this.stopRingtone();
+    this.stopCallingTone();
   }
 }
 
