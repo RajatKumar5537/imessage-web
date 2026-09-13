@@ -808,7 +808,7 @@ export default function PrimeChatApp() {
   return (
     <div
       style={{ height: "var(--app-height, 100%)", maxHeight: "var(--app-height, 100%)" }}
-      className="fixed inset-0 w-full flex items-center justify-center bg-[#000000] text-white p-0 sm:p-2 md:p-3 overflow-hidden select-none font-sans"
+      className="fixed inset-0 w-full flex items-center justify-center bg-[#030308]/85 backdrop-blur-3xl text-white p-0 sm:p-2 md:p-3 overflow-hidden select-none font-sans"
     >
       {/* 🎆 FULL SCREEN PARTICLES / FIREWORKS ENGINE */}
       <FullScreenEffects
