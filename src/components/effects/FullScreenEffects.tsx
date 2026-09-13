@@ -51,11 +51,10 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     }
 
     /* -------------------------------------------------------------
-       1. FIREWORKS PARTICLE ENGINE (Crisp bursts, zero fuzzy blur)
+       1. FIREWORKS / FIRECRACKER ENGINE (Authentic Multi-Zone Starburst matching Screenshot 2)
        ------------------------------------------------------------- */
     if (effect === "fireworks") {
-      const colors = ["#FF3B5C", "#FF9500", "#FFD60A", "#30D158", "#0A84FF", "#BF5AF2", "#64D2FF", "#FFFFFF"];
-      const particles: Array<{
+      interface FireworkParticle {
         x: number;
         y: number;
         vx: number;
@@ -66,109 +65,125 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
         decay: number;
         friction: number;
         gravity: number;
-      }> = [];
+        trail: Array<{ x: number; y: number }>;
+        isSparkle: boolean;
+      }
 
-      const rockets: Array<{
+      interface SparkleEmber {
         x: number;
         y: number;
-        targetY: number;
         vx: number;
         vy: number;
+        alpha: number;
+        decay: number;
         color: string;
-      }> = [];
+        size: number;
+        jitterAmp: number;
+      }
 
-      const createRocket = () => {
-        if (!isRunning) return;
-        const x = width * 0.15 + Math.random() * (width * 0.7);
-        const targetY = height * 0.15 + Math.random() * (height * 0.35);
-        rockets.push({
-          x,
-          y: height,
-          targetY,
-          vx: (Math.random() - 0.5) * 1.5,
-          vy: -(10 + Math.random() * 4),
-          color: colors[Math.floor(Math.random() * colors.length)],
-        });
-      };
+      const particles: FireworkParticle[] = [];
+      const embers: SparkleEmber[] = [];
+      let flashAlpha = 0;
 
-      const explode = (x: number, y: number, color: string) => {
+      // Color palettes for starburst zones
+      const pinkShades = ["#FF2D55", "#FF375F", "#FF6584", "#FFFFFF", "#FF85A2"];
+      const greenShades = ["#30D158", "#34C759", "#A8F53B", "#FFFFFF", "#72F576"];
+      const whiteGoldShades = ["#FFFFFF", "#FFF4A3", "#FFD700", "#FFE57F", "#F5F5F7"];
+
+      const triggerBurst = (cx: number, cy: number, primary: boolean = false) => {
         if (!isRunning) return;
         soundEngine.playFireworksCrackle();
-        const count = 110 + Math.floor(Math.random() * 55);
-        for (let i = 0; i < count; i++) {
-          const angle = Math.random() * Math.PI * 2;
-          const speed = Math.random() * 6 + 1.8;
+        flashAlpha = primary ? 0.32 : 0.16;
+
+        const rayCount = primary ? 260 : 160;
+        for (let i = 0; i < rayCount; i++) {
+          const angle = (i / rayCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.08;
+          // Determine color based on spatial angle to match Screenshot 2:
+          // Bottom arc (angle between ~0.1pi and 0.9pi): hot pink/magenta
+          // Right/upper arc (angle between -0.4pi and 0.2pi): neon lime-green
+          // Center/top/everywhere: bright diamond white & gold
+          let color: string;
+          const normAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+          if (normAngle > 0.35 * Math.PI && normAngle < 0.95 * Math.PI) {
+            // Lower hemisphere: vivid pink/magenta sparks
+            color = Math.random() > 0.25 ? pinkShades[Math.floor(Math.random() * pinkShades.length)] : whiteGoldShades[0];
+          } else if (normAngle > 1.65 * Math.PI || normAngle < 0.25 * Math.PI) {
+            // Right quadrant: vivid lime-green sparks
+            color = Math.random() > 0.25 ? greenShades[Math.floor(Math.random() * greenShades.length)] : whiteGoldShades[0];
+          } else {
+            // Upper and left: brilliant white & champagne gold
+            color = whiteGoldShades[Math.floor(Math.random() * whiteGoldShades.length)];
+          }
+
+          // Varied velocity produces dense inner core + long radiating streaks
+          const speed = primary
+            ? Math.pow(Math.random(), 0.45) * 11.5 + 2.5
+            : Math.pow(Math.random(), 0.45) * 8.5 + 1.8;
+
           particles.push({
-            x,
-            y,
+            x: cx,
+            y: cy,
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed,
             alpha: 1,
-            color: Math.random() > 0.25 ? color : colors[Math.floor(Math.random() * colors.length)],
-            size: Math.random() * 2.5 + 1.2,
-            decay: Math.random() * 0.018 + 0.009,
-            friction: 0.965,
+            color,
+            size: Math.random() * 2.6 + 1.2,
+            decay: Math.random() * 0.012 + 0.009,
+            friction: 0.962,
             gravity: 0.075,
+            trail: [{ x: cx, y: cy }],
+            isSparkle: Math.random() > 0.4,
+          });
+        }
+
+        // Crackling stardust embers drifting in the burst cloud
+        const emberCount = primary ? 160 : 80;
+        for (let e = 0; e < emberCount; e++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = Math.random() * 5 + 0.5;
+          embers.push({
+            x: cx + (Math.random() - 0.5) * 20,
+            y: cy + (Math.random() - 0.5) * 20,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 0.5,
+            alpha: 1,
+            decay: Math.random() * 0.008 + 0.006,
+            color: Math.random() > 0.5 ? "#FFD700" : (Math.random() > 0.5 ? "#FFFFFF" : "#FF375F"),
+            size: Math.random() * 1.8 + 0.8,
+            jitterAmp: Math.random() * 1.8 + 0.8,
           });
         }
       };
 
-      // Continuous fireworks rocket launches throughout the active duration
-      createRocket();
-      timeoutIds.push(setTimeout(createRocket, 180));
-      timeoutIds.push(setTimeout(createRocket, 420));
-      timeoutIds.push(setTimeout(createRocket, 700));
+      // Initial Grand Central Burst matching Screenshot 2 position
+      triggerBurst(width * 0.48, height * 0.36, true);
 
-      const barrageInterval = setInterval(() => {
-        if (!isRunning) return;
-        createRocket();
-        // Double rocket burst frequently
-        if (Math.random() > 0.35) {
-          setTimeout(createRocket, 160 + Math.random() * 120);
-        }
-        // Triple rocket grand burst occasionally
-        if (Math.random() > 0.65) {
-          setTimeout(createRocket, 320 + Math.random() * 100);
-        }
-      }, 550);
-      timeoutIds.push(barrageInterval);
-
-      // Stop launching new rockets around 5.5s so existing explosions conclude naturally by ~8s
-      timeoutIds.push(
-        setTimeout(() => {
-          clearInterval(barrageInterval);
-        }, 5500)
-      );
+      // Complementary secondary bursts creating dynamic multi-tier spectacle
+      timeoutIds.push(setTimeout(() => triggerBurst(width * 0.72, height * 0.30, false), 380));
+      timeoutIds.push(setTimeout(() => triggerBurst(width * 0.26, height * 0.42, false), 750));
+      timeoutIds.push(setTimeout(() => triggerBurst(width * 0.52, height * 0.34, true), 1300));
+      timeoutIds.push(setTimeout(() => triggerBurst(width * 0.38, height * 0.28, false), 2100));
+      timeoutIds.push(setTimeout(() => triggerBurst(width * 0.68, height * 0.38, false), 2800));
 
       const render = () => {
         if (!isRunning || !ctx) return;
         ctx.clearRect(0, 0, width, height);
 
-        // Rockets
-        for (let i = rockets.length - 1; i >= 0; i--) {
-          const r = rockets[i];
-          r.x += r.vx;
-          r.y += r.vy;
-
-          ctx.beginPath();
-          ctx.arc(r.x, r.y, 2.5, 0, Math.PI * 2);
-          ctx.fillStyle = r.color;
-          ctx.fill();
-
-          ctx.beginPath();
-          ctx.arc(r.x + (Math.random() - 0.5) * 2, r.y + 3, 1.2, 0, Math.PI * 2);
-          ctx.fillStyle = "#FFFFFF";
-          ctx.fill();
-
-          if (r.y <= r.targetY || r.vy >= 0) {
-            explode(r.x, r.y, r.color);
-            rockets.splice(i, 1);
-          }
+        // 1. Detonation flash glow
+        if (flashAlpha > 0.01) {
+          ctx.save();
+          ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+          ctx.fillRect(0, 0, width, height);
+          ctx.restore();
+          flashAlpha *= 0.76;
         }
 
-        // Particles
+        // 2. Starburst Streak Rays with trailing tails
         for (let i = particles.length - 1; i >= 0; i--) {
           const p = particles[i];
+          p.trail.push({ x: p.x, y: p.y });
+          if (p.trail.length > 7) p.trail.shift();
+
           p.vx *= p.friction;
           p.vy *= p.friction;
           p.vy += p.gravity;
@@ -183,9 +198,51 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
 
           ctx.save();
           ctx.globalAlpha = Math.max(0, p.alpha);
+
+          // Draw radiant streak beam
+          if (p.trail.length > 1) {
+            ctx.beginPath();
+            ctx.moveTo(p.trail[0].x, p.trail[0].y);
+            for (let t = 1; t < p.trail.length; t++) {
+              ctx.lineTo(p.trail[t].x, p.trail[t].y);
+            }
+            ctx.lineTo(p.x, p.y);
+            ctx.strokeStyle = p.color;
+            ctx.lineWidth = p.size;
+            ctx.lineCap = "round";
+            ctx.stroke();
+          }
+
+          // Glowing spark tip
           ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = p.color;
+          ctx.arc(p.x, p.y, Math.max(1, p.size * 0.8), 0, Math.PI * 2);
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fill();
+
+          ctx.restore();
+        }
+
+        // 3. Crackling sparkle embers
+        for (let e = embers.length - 1; e >= 0; e--) {
+          const emb = embers[e];
+          emb.vx *= 0.98;
+          emb.vy += 0.04;
+          emb.x += emb.vx + (Math.random() - 0.5) * emb.jitterAmp;
+          emb.y += emb.vy;
+          emb.alpha -= emb.decay;
+
+          if (emb.alpha <= 0) {
+            embers.splice(e, 1);
+            continue;
+          }
+
+          ctx.save();
+          // Twinkle effect
+          const twinkleAlpha = emb.alpha * (0.6 + Math.random() * 0.4);
+          ctx.globalAlpha = Math.max(0, twinkleAlpha);
+          ctx.beginPath();
+          ctx.arc(emb.x, emb.y, emb.size, 0, Math.PI * 2);
+          ctx.fillStyle = emb.color;
           ctx.fill();
           ctx.restore();
         }
@@ -199,84 +256,156 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     }
 
     /* -------------------------------------------------------------
-       2. BALLOONS ENGINE (Apple iMessage Style: Glossy, sharp, realistic)
+       2. BALLOONS ENGINE (Authentic Hero Balloon & Companions matching Screenshot 1)
        ------------------------------------------------------------- */
     else if (effect === "balloons") {
-      const balloonDefs = [
-        { color: "#FF3B30", highlight: "#FF8E85" },
-        { color: "#FF9500", highlight: "#FFC266" },
-        { color: "#FFCC00", highlight: "#FFE57F" },
-        { color: "#34C759", highlight: "#8CE6A3" },
-        { color: "#007AFF", highlight: "#70B4FF" },
-        { color: "#AF52DE", highlight: "#D89EFA" },
-        { color: "#FF2D55", highlight: "#FF8AA1" },
-        { color: "#5856D6", highlight: "#9D9BF0" },
+      // 1. Giant Translucent Blue Hero Balloon (dominates foreground left-center like Screenshot 1)
+      const heroRx = Math.min(width * 0.44, 210);
+      const heroRy = Math.min(width * 0.54, 270);
+      const heroBalloon = {
+        x: width * 0.38,
+        y: height + heroRy + 40,
+        rx: heroRx,
+        ry: heroRy,
+        vy: -2.7,
+        swayPhase: 0,
+        swaySpeed: 0.016,
+      };
+
+      // 2. Realistic Companion Balloons in background with varied depths & colors
+      const companionDefs = [
+        { color: "#38A8F8", highlight: "rgba(255,255,255,0.75)", rx: heroRx * 0.38, ry: heroRy * 0.38, xRatio: 0.44, yOffset: 120, vy: -2.3, alpha: 0.8 }, // translucent behind hero
+        { color: "#FF3B30", highlight: "#FF9E99", rx: 42, ry: 54, xRatio: 0.82, yOffset: 60, vy: -2.9, alpha: 0.95 }, // vivid red
+        { color: "#34C759", highlight: "#96EDB0", rx: 36, ry: 46, xRatio: 0.88, yOffset: 160, vy: -2.8, alpha: 0.95 }, // lime green
+        { color: "#007AFF", highlight: "#82BEFF", rx: 34, ry: 44, xRatio: 0.78, yOffset: 240, vy: -3.0, alpha: 0.92 }, // cyan blue
+        { color: "#FFCC00", highlight: "#FFF099", rx: 40, ry: 50, xRatio: 0.18, yOffset: 200, vy: -2.7, alpha: 0.95 }, // golden yellow
+        { color: "#AF52DE", highlight: "#E0ACFC", rx: 38, ry: 48, xRatio: 0.26, yOffset: 320, vy: -2.8, alpha: 0.95 }, // purple
+        { color: "#FF9500", highlight: "#FFD285", rx: 35, ry: 45, xRatio: 0.65, yOffset: 380, vy: -3.1, alpha: 0.95 }, // orange
+        { color: "#FF2D55", highlight: "#FFA3B5", rx: 38, ry: 48, xRatio: 0.85, yOffset: 460, vy: -2.9, alpha: 0.95 }, // ruby pink
+        { color: "#5856D6", highlight: "#B0AEF5", rx: 36, ry: 46, xRatio: 0.12, yOffset: 420, vy: -2.8, alpha: 0.95 }, // indigo
       ];
 
-      const balloonCount = Math.max(14, Math.min(26, Math.floor(width / 32)));
-      const balloons = Array.from({ length: balloonCount }).map(() => {
-        const def = balloonDefs[Math.floor(Math.random() * balloonDefs.length)];
-        return {
-          x: Math.random() * width,
-          y: height + Math.random() * (height * 0.8),
-          vx: (Math.random() - 0.5) * 1.2,
-          vy: -(Math.random() * 2.8 + 2.2),
-          color: def.color,
-          highlight: def.highlight,
-          radiusX: Math.random() * 10 + 22,
-          radiusY: Math.random() * 12 + 28,
-          swayPhase: Math.random() * Math.PI * 2,
-          swaySpeed: Math.random() * 0.03 + 0.02,
-        };
-      });
+      const companionBalloons = companionDefs.map((def) => ({
+        x: width * def.xRatio,
+        y: height + def.yOffset + 50,
+        rx: def.rx,
+        ry: def.ry,
+        vy: def.vy,
+        color: def.color,
+        highlight: def.highlight,
+        alpha: def.alpha,
+        swayPhase: Math.random() * Math.PI * 2,
+        swaySpeed: Math.random() * 0.02 + 0.015,
+      }));
 
-      const drawBalloon = (
+      // Render standard companion balloon
+      const drawCompanionBalloon = (
         x: number,
         y: number,
         rx: number,
         ry: number,
         color: string,
         highlight: string,
+        alpha: number,
         sway: number
       ) => {
         ctx.save();
+        ctx.globalAlpha = alpha;
 
-        // 1. Crisp balloon string
+        // String
         ctx.beginPath();
-        ctx.moveTo(x, y + ry);
-        ctx.quadraticCurveTo(x + sway * 12, y + ry + 30, x - sway * 6, y + ry + 60);
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.moveTo(x, y + ry + 4);
+        ctx.quadraticCurveTo(x + sway * 10, y + ry + 40, x - sway * 5, y + ry + 80);
+        ctx.strokeStyle = "rgba(230, 230, 245, 0.65)";
         ctx.lineWidth = 1.2;
         ctx.stroke();
 
-        // 2. Balloon body with 3D radial gradient
+        // Body
         ctx.beginPath();
         ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
         const grad = ctx.createRadialGradient(x - rx * 0.32, y - ry * 0.35, rx * 0.08, x, y, ry * 1.1);
         grad.addColorStop(0, highlight);
         grad.addColorStop(0.65, color);
-        grad.addColorStop(1, "rgba(0, 0, 0, 0.4)");
+        grad.addColorStop(1, "rgba(0, 0, 0, 0.45)");
         ctx.fillStyle = grad;
         ctx.fill();
 
-        // Clean subtle edge definition
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        // 3. Knot at base of balloon
+        // Knot
         ctx.beginPath();
-        ctx.moveTo(x - 3, y + ry);
-        ctx.lineTo(x + 3, y + ry);
-        ctx.lineTo(x, y + ry + 4);
-        ctx.closePath();
+        ctx.ellipse(x, y + ry + 3, 3.5, 2.5, 0, 0, Math.PI * 2);
         ctx.fillStyle = color;
         ctx.fill();
 
-        // 4. Gloss Specular Reflection (Crisp crescent shine)
+        // Specular highlight
         ctx.beginPath();
         ctx.ellipse(x - rx * 0.35, y - ry * 0.38, rx * 0.22, ry * 0.14, -Math.PI / 4, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+        ctx.fill();
+
+        ctx.restore();
+      };
+
+      // Render Hero Balloon matching Screenshot 1 (translucent cyan-blue, elegant curved crescent shine, knot & string)
+      const drawHeroBalloon = (x: number, y: number, rx: number, ry: number, sway: number) => {
+        ctx.save();
+
+        // 1. Long Braided White String dropping straight down
+        ctx.beginPath();
+        ctx.moveTo(x, y + ry + 6);
+        ctx.quadraticCurveTo(x + sway * 12, y + ry + 90, x + sway * 4, y + ry + 300);
+        ctx.lineTo(x + sway * 4, height + 80);
+        ctx.strokeStyle = "rgba(245, 245, 255, 0.78)";
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        // 2. Translucent 3D Balloon Body
+        ctx.beginPath();
+        ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+        const heroGrad = ctx.createRadialGradient(x - rx * 0.28, y - ry * 0.32, rx * 0.1, x, y, ry * 1.05);
+        heroGrad.addColorStop(0, "rgba(125, 205, 255, 0.82)");
+        heroGrad.addColorStop(0.48, "rgba(0, 138, 255, 0.85)");
+        heroGrad.addColorStop(0.85, "rgba(0, 95, 220, 0.90)");
+        heroGrad.addColorStop(1, "rgba(0, 60, 175, 0.94)");
+        ctx.fillStyle = heroGrad;
+        ctx.fill();
+
+        // Subtle glowing perimeter rim
+        ctx.strokeStyle = "rgba(180, 225, 255, 0.35)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // 3. Elegant Left-Side Curved Specular Crescent Highlight (Iconic iMessage Balloon feature from Screenshot 1)
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(x - rx * 0.74, y - ry * 0.08, rx * 0.085, ry * 0.46, -0.16, 0, Math.PI * 2);
+        const rimGrad = ctx.createLinearGradient(x - rx * 0.8, y - ry * 0.5, x - rx * 0.6, y + ry * 0.4);
+        rimGrad.addColorStop(0, "rgba(255, 255, 255, 0.15)");
+        rimGrad.addColorStop(0.35, "rgba(255, 255, 255, 0.85)");
+        rimGrad.addColorStop(0.75, "rgba(255, 255, 255, 0.60)");
+        rimGrad.addColorStop(1, "rgba(255, 255, 255, 0.10)");
+        ctx.fillStyle = rimGrad;
+        ctx.fill();
+        ctx.restore();
+
+        // Secondary soft top-center highlight
+        ctx.beginPath();
+        ctx.ellipse(x - rx * 0.2, y - ry * 0.45, rx * 0.25, ry * 0.15, -0.2, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.40)";
+        ctx.fill();
+
+        // 4. Realistic Tied Balloon Neck Knot at base
+        ctx.beginPath();
+        ctx.ellipse(x, y + ry + 4, 8, 4.5, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "#005CBD";
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(x - 5, y + ry + 2);
+        ctx.lineTo(x + 5, y + ry + 2);
+        ctx.lineTo(x + 7, y + ry + 9);
+        ctx.lineTo(x - 7, y + ry + 9);
+        ctx.closePath();
+        ctx.fillStyle = "#004B9E";
         ctx.fill();
 
         ctx.restore();
@@ -286,14 +415,20 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
         if (!isRunning || !ctx) return;
         ctx.clearRect(0, 0, width, height);
 
-        for (const b of balloons) {
-          b.y += b.vy;
-          b.swayPhase += b.swaySpeed;
-          const sway = Math.sin(b.swayPhase);
-          b.x += b.vx + sway * 0.7;
-
-          drawBalloon(b.x, b.y, b.radiusX, b.radiusY, b.color, b.highlight, sway);
+        // Render companion balloons in background
+        for (const cb of companionBalloons) {
+          cb.y += cb.vy;
+          cb.swayPhase += cb.swaySpeed;
+          const sway = Math.sin(cb.swayPhase);
+          cb.x += sway * 0.5;
+          drawCompanionBalloon(cb.x, cb.y, cb.rx, cb.ry, cb.color, cb.highlight, cb.alpha, sway);
         }
+
+        // Render Hero Balloon in foreground
+        heroBalloon.y += heroBalloon.vy;
+        heroBalloon.swayPhase += heroBalloon.swaySpeed;
+        const heroSway = Math.sin(heroBalloon.swayPhase);
+        drawHeroBalloon(heroBalloon.x + heroSway * 10, heroBalloon.y, heroBalloon.rx, heroBalloon.ry, heroSway);
 
         if (isRunning) {
           animationFrameId = requestAnimationFrame(render);
@@ -304,36 +439,80 @@ export default function FullScreenEffects({ effect, onComplete }: FullScreenEffe
     }
 
     /* -------------------------------------------------------------
-       3. CONFETTI ENGINE (Vibrant celebratory flutter)
+       3. CONFETTI ENGINE (Vibrant 3D Tumbling Ribbons & Flakes matching Screenshot 4)
        ------------------------------------------------------------- */
     else if (effect === "confetti") {
-      const confettiColors = ["#FFD700", "#FF2D55", "#00F2FE", "#30D158", "#FF9500", "#BF5AF2", "#FFFFFF"];
-      const pieceCount = Math.max(60, Math.min(130, Math.floor(width / 7)));
-      const pieces = Array.from({ length: pieceCount }).map(() => ({
-        x: Math.random() * width,
-        y: -Math.random() * (height * 0.6),
-        vx: (Math.random() - 0.5) * 3,
-        vy: Math.random() * 3.5 + 2.8,
-        size: Math.random() * 7 + 6,
-        color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
-        rotation: Math.random() * 360,
-        rotationSpeed: (Math.random() - 0.5) * 8,
-      }));
+      // Palette from Apple iMessage Send with Confetti (Screenshot 4)
+      const confettiColors = [
+        { front: "#007AFF", back: "#0055B3" }, // Sky Azure
+        { front: "#3552FF", back: "#2034BF" }, // Royal Blue
+        { front: "#FF2D55", back: "#B81434" }, // Hot Magenta / Ruby
+        { front: "#FF375F", back: "#BD173B" }, // Crimson Pink
+        { front: "#FFD60A", back: "#C4A200" }, // Sunflower Yellow
+        { front: "#FF9500", back: "#B86500" }, // Tangy Orange
+        { front: "#30D158", back: "#1D8F39" }, // Lime Green
+        { front: "#00E5FF", back: "#009BB0" }, // Electric Cyan
+        { front: "#BF5AF2", back: "#7D2DA8" }, // Violet Purple
+        { front: "#FFFFFF", back: "#D0D0D5" }, // Crisp White
+      ];
+
+      // Screen packed with dense fluttering ribbons matching Screenshot 4
+      const pieceCount = Math.max(160, Math.min(240, Math.floor(width / 2.2)));
+      const pieces = Array.from({ length: pieceCount }).map(() => {
+        const colorPair = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+        const isRibbon = Math.random() > 0.22; // 78% rectangular strips, 22% square flakes
+        const w = isRibbon ? Math.random() * 8 + 12 : Math.random() * 4 + 7;
+        const h = isRibbon ? Math.random() * 3 + 5 : w;
+
+        return {
+          // Spread across and above viewport so full screen is immediately alive
+          x: Math.random() * width,
+          y: Math.random() * height * 1.1 - height * 0.4,
+          vx: (Math.random() - 0.5) * 2.4,
+          vy: Math.random() * 2.8 + 2.4,
+          w,
+          h,
+          frontColor: colorPair.front,
+          backColor: colorPair.back,
+          rotZ: Math.random() * 360,
+          rotSpeedZ: (Math.random() - 0.5) * 6,
+          rotX: Math.random() * Math.PI * 2,
+          rotSpeedX: Math.random() * 0.08 + 0.04,
+          swayPhase: Math.random() * Math.PI * 2,
+          swaySpeed: Math.random() * 0.04 + 0.02,
+          swayAmp: Math.random() * 2.2 + 1.2,
+        };
+      });
 
       const render = () => {
         if (!isRunning || !ctx) return;
         ctx.clearRect(0, 0, width, height);
 
         for (const p of pieces) {
-          p.x += p.vx + Math.sin(p.y * 0.015) * 1.5;
+          p.swayPhase += p.swaySpeed;
+          p.x += p.vx + Math.sin(p.swayPhase) * p.swayAmp;
           p.y += p.vy;
-          p.rotation += p.rotationSpeed;
+          p.rotZ += p.rotSpeedZ;
+          p.rotX += p.rotSpeedX;
+
+          // Recycle pieces that fall below the screen to maintain continuous cascade
+          if (p.y > height + 20) {
+            p.y = -Math.random() * 50 - 10;
+            p.x = Math.random() * width;
+          }
+
+          // 3D Tumbling Paper projection
+          const cosX = Math.cos(p.rotX);
+          const flipHeight = p.h * Math.abs(cosX);
 
           ctx.save();
           ctx.translate(p.x, p.y);
-          ctx.rotate((p.rotation * Math.PI) / 180);
-          ctx.fillStyle = p.color;
-          ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+          ctx.rotate((p.rotZ * Math.PI) / 180);
+
+          // Render front or shaded back face based on flip angle
+          ctx.fillStyle = cosX >= 0 ? p.frontColor : p.backColor;
+          ctx.fillRect(-p.w / 2, -flipHeight / 2, p.w, flipHeight);
+
           ctx.restore();
         }
 

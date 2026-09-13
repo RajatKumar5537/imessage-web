@@ -164,6 +164,14 @@ export default function MessageBubble({
     setSwipeOffset(0);
   };
 
+  const isShortText = Boolean(
+    message.text &&
+    message.text.trim().length <= 3 &&
+    !message.text.includes(" ") &&
+    !message.text.includes("\n") &&
+    !message.mediaData
+  );
+
   const isMe = message.isMe;
 
   const timeStr = new Date(message.createdAt).toLocaleTimeString([], {
@@ -254,7 +262,7 @@ export default function MessageBubble({
           )}
 
           <div
-            className="relative group touch-pan-y"
+            className={`relative group touch-pan-y max-w-full min-w-0 flex flex-col ${isMe ? "items-end" : "items-start"}`}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -320,31 +328,38 @@ export default function MessageBubble({
               transition={motionProps.transition}
               onContextMenu={(e) => { e.preventDefault(); setShowTapback(true); }}
               onClick={() => setShowActions((v) => !v)}
-              className={`relative w-fit min-w-[72px] sm:min-w-[80px] max-w-full rounded-[18px] px-4 py-2 sm:px-5 sm:py-2.5 shadow-sm select-none touch-pan-y cursor-pointer flex flex-col justify-center min-h-[38px] ${
+              className={`relative rounded-[20px] shadow-md select-none touch-pan-y cursor-pointer ${
+                isShortText
+                  ? "w-fit min-w-[56px] min-h-[36px] px-3.5 py-1.5 sm:px-4 sm:py-2 flex items-center justify-center text-center"
+                  : "w-fit max-w-full px-4 py-2.5 sm:px-4.5 sm:py-2.5 flex flex-col justify-center text-left"
+              } ${
                 message.isDeleted
-                  ? "bg-white/[0.05] text-slate-400 italic border border-white/5"
+                  ? "bg-[#2C2C2E] text-slate-400 italic border border-white/[0.06]"
                   : isMe
-                  ? "bg-[#007AFF] text-white rounded-br-[4px]"
-                  : "bg-[#26252A] text-white rounded-bl-[4px]"
+                  ? "bg-[#007AFF] text-white rounded-br-[5px]"
+                  : "bg-[#2C2C2E] text-white rounded-bl-[5px] border border-white/[0.06]"
               }`}
             >
               {/* Sender Name only in Group Chats on received messages */}
               {!isMe && showAvatar && !message.isDeleted && (
-                <div className="text-[11px] font-semibold text-blue-400 mb-1 select-none">
+                <div className="text-[11px] font-semibold text-blue-400 mb-1 select-none text-left w-full">
                   {message.senderName || "Member"}
                 </div>
               )}
 
               {message.isDeleted ? (
-                <span className="text-slate-400 italic text-[14px]">This message was deleted</span>
+                <span className="text-slate-400 italic text-[13px] flex items-center gap-1.5 text-left">
+                  <span>🚫</span>
+                  <span>This message was deleted</span>
+                </span>
               ) : isEditing ? (
-                <div className="space-y-1.5 my-1" onClick={(e) => e.stopPropagation()}>
+                <div className="space-y-1.5 my-1 w-full" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="text"
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSaveEdit()}
-                    className="w-full bg-white/15 border border-white/30 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-white"
+                    className="w-full bg-white/15 border border-white/30 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-white text-left"
                     autoFocus
                   />
                   <div className="flex gap-1.5 justify-end">
@@ -353,9 +368,9 @@ export default function MessageBubble({
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col justify-center w-full">
+                <div className={`flex flex-col justify-center w-full ${isShortText ? "items-center text-center" : "items-start text-left"}`}>
                   {message.mediaType === "image" && message.mediaData && (
-                    <div className="relative rounded-2xl overflow-hidden bg-black/30 mb-1 group/media">
+                    <div className="relative rounded-2xl overflow-hidden bg-black/30 mb-1 group/media max-w-full">
                       <img
                         src={message.mediaData}
                         alt={message.mediaName || "Photo"}
@@ -376,7 +391,7 @@ export default function MessageBubble({
                     </div>
                   )}
                   {message.mediaType === "video" && message.mediaData && (
-                    <div className="relative rounded-2xl overflow-hidden bg-black/30 mb-1 group/media">
+                    <div className="relative rounded-2xl overflow-hidden bg-black/30 mb-1 group/media max-w-full">
                       <video
                         src={message.mediaData}
                         controls
@@ -411,19 +426,15 @@ export default function MessageBubble({
                   )}
                   {/* Clean Native iMessage Typography with Proportional Width */}
                   {message.text && (
-                    <div className="flex flex-col justify-center my-auto w-full">
+                    <div className={`my-auto max-w-full min-w-0 ${isShortText ? "w-full text-center flex justify-center items-center" : "w-full text-left"}`}>
                       {message.effect === "invisible_ink" ? (
                         <InvisibleInk>
-                          <p className="whitespace-pre-wrap break-words leading-[1.35] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text m-0 p-0 text-center">
+                          <p className={`whitespace-pre-wrap break-words [word-break:break-word] leading-[1.38] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text m-0 p-0 ${isShortText ? "text-center" : "text-left"}`}>
                             {message.text}
                           </p>
                         </InvisibleInk>
                       ) : (
-                        <p
-                          className={`whitespace-pre-wrap break-words leading-[1.35] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text m-0 p-0 ${
-                            message.text.includes("\n") || message.text.length > 16 ? "text-left" : "text-center"
-                          }`}
-                        >
+                        <p className={`whitespace-pre-wrap break-words [word-break:break-word] leading-[1.38] text-[15px] sm:text-[15.5px] font-normal text-white tracking-[-0.01em] select-text m-0 p-0 ${isShortText ? "text-center" : "text-left"}`}>
                           {message.text}
                         </p>
                       )}
@@ -474,9 +485,13 @@ export default function MessageBubble({
                 {isMe && (
                   <>
                     <span className={message.isRead ? "text-zinc-300 font-medium" : "text-zinc-500"}>
-                      {message.isRead ? "Read" : "Delivered"}
+                      {message.isRead ? "Read" : "Sent"}
                     </span>
-                    <CheckCheck className={`w-3.5 h-3.5 inline ${message.isRead ? "text-[#007AFF]" : "text-zinc-500"}`} />
+                    {message.isRead ? (
+                      <CheckCheck className="w-3.5 h-3.5 inline text-[#007AFF]" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5 inline text-zinc-500" />
+                    )}
                   </>
                 )}
               </div>

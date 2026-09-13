@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { signIn } from "next-auth/react";
+import React, { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MessageSquare, Lock, Mail, User, ArrowRight, ShieldCheck, Sparkles, Eye, EyeOff, KeyRound } from "lucide-react";
@@ -10,6 +10,7 @@ import { DEFAULT_AVATAR } from "@/lib/avatars";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { status } = useSession();
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -20,6 +21,12 @@ export default function LoginPage() {
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState(DEFAULT_AVATAR);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/");
+    }
+  }, [status, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,8 +62,7 @@ export default function LoginPage() {
         throw new Error(res.error);
       }
 
-      router.push("/");
-      router.refresh();
+      router.replace("/");
     } catch (err: any) {
       setError(err.message || "Authentication failed");
     } finally {

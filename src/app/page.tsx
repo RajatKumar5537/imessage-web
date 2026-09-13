@@ -43,12 +43,23 @@ export default function PrimeChatApp() {
   const [isMyProfileModalOpen, setIsMyProfileModalOpen] = useState(false);
   const [customProfile, setCustomProfile] = useState<{ name?: string; avatar?: string; statusMessage?: string }>({});
 
+  // Delete Confirmation & Toast
+  const [deleteConfirmMessageId, setDeleteConfirmMessageId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const toastTimerRef = useRef<any>(null);
+
   // WebRTC Call State
   const [activeCall, setActiveCall] = useState<any | null>(null);
 
   // Contacts & Pending Requests
   const [pendingIncomingRequests, setPendingIncomingRequests] = useState<any[]>([]);
   const prevIncomingRequestsCountRef = useRef<number | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToastMessage(null), 2800);
+  };
 
 
 
@@ -75,9 +86,9 @@ export default function PrimeChatApp() {
   const isFetchingConversationsRef = useRef(false);
 
   // 1. Fetch Conversations
-  const fetchConversations = async () => {
+  const fetchConversations = async (force = false) => {
     if (status !== "authenticated") return;
-    if (isFetchingConversationsRef.current) return;
+    if (!force && isFetchingConversationsRef.current) return;
     isFetchingConversationsRef.current = true;
     try {
       const res = await fetch("/api/chat/conversations");
@@ -130,6 +141,7 @@ export default function PrimeChatApp() {
     if (!convId) return;
     if (isFetchingMessagesRef.current && !isInitial && !forceScroll) return;
     isFetchingMessagesRef.current = true;
+
     try {
       const res = await fetch(`/api/chat/messages?conversationId=${convId}`);
       if (res.ok) {
@@ -189,20 +201,13 @@ export default function PrimeChatApp() {
             chatBottomRef.current?.scrollIntoView({ behavior: isInitial ? "auto" : "smooth" });
           }, 60);
         } else if (hasNewMessages) {
-          const container = chatContainerRef.current;
-          const isNearBottom = container
-            ? container.scrollHeight - container.scrollTop - container.clientHeight < 160
-            : true;
-
-          if (isNearBottom || lastMsg?.isMe) {
-            setTimeout(() => {
-              chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-            }, 60);
-          }
+          setTimeout(() => {
+            chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+          }, 60);
         }
       }
-    } catch (err) {
-      console.error("Error fetching messages:", err);
+    } catch (err: any) {
+      console.warn("Message fetch notice:", err?.message || err);
     } finally {
       isFetchingMessagesRef.current = false;
     }
@@ -219,7 +224,9 @@ export default function PrimeChatApp() {
   useEffect(() => {
     if (activeConversationId) {
       prevMessagesCountRef.current = 0;
-      fetchMessages(activeConversationId, true);
+      // Reset fetch guard so switching conversations always loads fresh messages immediately
+      isFetchingMessagesRef.current = false;
+      fetchMessages(activeConversationId, true, true);
     }
   }, [activeConversationId]);
 
@@ -247,7 +254,7 @@ export default function PrimeChatApp() {
       } catch (_) {}
 
       if (!isCancelled) {
-        timerId = setTimeout(pollActiveChat, 1100);
+        timerId = setTimeout(pollActiveChat, 1000);
       }
     };
 
@@ -322,7 +329,7 @@ export default function PrimeChatApp() {
     };
 
     pollCall();
-    const intervalTime = activeCall ? 600 : 1000;
+    const intervalTime = activeCall ? 600 : 2500;
     const interval = setInterval(pollCall, intervalTime);
     return () => clearInterval(interval);
   }, [status, !!activeCall]);
@@ -337,6 +344,8 @@ export default function PrimeChatApp() {
   const handleSelectConversation = (id: string) => {
     setActiveConversationId(id);
     setMobileView("chat");
+    isFetchingMessagesRef.current = false;
+    fetchMessages(id, true, true);
   };
 
   const handleSendMessage = async (msgData: any) => {
@@ -379,6 +388,29 @@ export default function PrimeChatApp() {
     setMessages((prev) => [...prev, optimisticMsg]);
     setReplyTo(null);
 
+    // Optimistically update conversation card in sidebar immediately
+    const previewText = msgData.text || (msgData.mediaType ? `[${msgData.mediaType.toUpperCase()}]` : "");
+    setConversations((prev) =>
+      prev.map((c) =>
+        c._id === activeConversationId
+          ? {
+              ...c,
+              lastMessage: {
+                text: previewText,
+                senderId: currentUserId,
+                senderName: session?.user?.name || "You",
+                isMe: true,
+                isRead: false,
+                createdAt: new Date().toISOString(),
+                mediaType: msgData.mediaType || null,
+                effect: msgData.effect || null,
+              },
+              updatedAt: new Date().toISOString(),
+            }
+          : c
+      )
+    );
+
     // Scroll to bottom immediately
     setTimeout(() => {
       chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -399,7 +431,8 @@ export default function PrimeChatApp() {
         setMessages((prev) =>
           prev.map((m) => (m._id === tempId ? { ...savedMsg, isMe: true } : m))
         );
-        fetchConversations();
+        fetchConversations(true);
+        fetchMessages(activeConversationId, false, true);
       }
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -432,12 +465,27 @@ export default function PrimeChatApp() {
     } catch (_) {}
   };
 
-  const handleDeleteMessage = async (messageId: string) => {
+  const handleDeleteMessage = (messageId: string) => {
+    // Show in-app confirmation instead of browser confirm()
+    setDeleteConfirmMessageId(messageId);
+  };
+
+  const confirmDeleteMessage = async () => {
+    if (!deleteConfirmMessageId) return;
+    const msgId = deleteConfirmMessageId;
+    setDeleteConfirmMessageId(null);
+    // Optimistically update UI immediately
+    setMessages((prev) =>
+      prev.map((m) =>
+        m._id === msgId
+          ? { ...m, isDeleted: true, text: "This message was deleted", mediaData: null, reactions: [] }
+          : m
+      )
+    );
+    showToast("Message deleted");
     try {
-      const res = await fetch(`/api/chat/messages?messageId=${messageId}`, {
-        method: "DELETE",
-      });
-      if (res.ok && activeConversationId) {
+      await fetch(`/api/chat/messages?messageId=${msgId}`, { method: "DELETE" });
+      if (activeConversationId) {
         fetchMessages(activeConversationId);
         fetchConversations();
       }
@@ -764,9 +812,9 @@ export default function PrimeChatApp() {
               {/* MESSAGE FEED */}
               <div
                 ref={chatContainerRef}
-                className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4 relative overscroll-contain"
+                className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4 relative overscroll-contain flex flex-col"
               >
-                <div className="w-full flex flex-col gap-y-4 sm:gap-y-5 justify-start min-h-full pb-8 sm:pb-12 pt-2">
+                <div className="w-full flex flex-col justify-end min-h-full gap-y-1 sm:gap-y-1.5 pb-4 sm:pb-6 pt-2">
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center min-h-[160px] my-auto text-center space-y-2.5 p-6 border border-dashed border-white/10 rounded-3xl bg-white/[0.03] backdrop-blur-md">
                       <div className="p-3 rounded-2xl bg-blue-500/20 text-[#007AFF] border border-blue-400/30 shadow-inner">
@@ -854,6 +902,48 @@ export default function PrimeChatApp() {
           )}
         </div>
       </div>
+
+      {/* TOAST NOTIFICATION */}
+      {toastMessage && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[200] pointer-events-none">
+          <div className="px-5 py-2.5 bg-[#1C1C1E]/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-2xl text-white text-sm font-medium animate-in fade-in slide-in-from-bottom-2 duration-200">
+            {toastMessage}
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirmMessageId && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
+          <div className="w-full max-w-xs bg-[#1C1C1E]/98 border border-white/15 rounded-3xl p-6 shadow-[0_25px_60px_rgba(0,0,0,0.95)] text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-400 flex items-center justify-center mx-auto">
+              <MessageSquare className="w-6 h-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-white">Delete Message?</h3>
+              <p className="text-xs text-neutral-400 leading-relaxed">
+                This will remove the message for everyone in the conversation.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmMessageId(null)}
+                className="flex-1 py-2.5 rounded-2xl text-xs font-semibold text-neutral-300 bg-white/8 hover:bg-white/12 border border-white/10 transition-all cursor-pointer active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteMessage}
+                className="flex-1 py-2.5 rounded-2xl text-xs font-bold bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-lg shadow-red-500/30 transition-all cursor-pointer active:scale-95"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3. MODALS */}
       {activeConversation && (

@@ -15,11 +15,14 @@ export async function GET(req: Request) {
     }
 
     await dbConnect();
-    const currentUser = await User.findOne({ email: session.user.email.toLowerCase().trim() });
-    if (!currentUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    let currentUserId = (session.user as any).id;
+    if (!currentUserId) {
+      const currentUser = await User.findOne({ email: session.user.email.toLowerCase().trim() }).lean();
+      if (!currentUser) {
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      currentUserId = currentUser._id.toString();
     }
-    const currentUserId = currentUser._id.toString();
 
     const { searchParams } = new URL(req.url, "http://localhost:3000");
     const callId = searchParams.get("callId");

@@ -56,12 +56,7 @@ export default function ContactProfileModal({
 }: ContactProfileModalProps) {
   const [activeTab, setActiveTab] = useState<"media" | "audio" | "docs" | "settings">("media");
   const [isMuted, setIsMuted] = useState(false);
-  const [selectedMedia, setSelectedMedia] = useState<{
-    type: "image" | "video";
-    data: string;
-    name?: string | null;
-    size?: string | null;
-  } | null>(null);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState<number | null>(null);
 
   const handleDownloadMedia = (url: string, name?: string | null, type: "image" | "video" = "image", e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -271,19 +266,12 @@ export default function ContactProfileModal({
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2.5">
-                    {photoVideos.map((m) => (
+                    {photoVideos.map((m, idx) => (
                       <div
                         key={m._id}
-                        onClick={() =>
-                          setSelectedMedia({
-                            type: m.mediaType === "video" ? "video" : "image",
-                            data: m.mediaData,
-                            name: m.mediaName,
-                            size: m.mediaSize,
-                          })
-                        }
+                        onClick={() => setSelectedMediaIndex(idx)}
                         className="relative aspect-square rounded-2xl overflow-hidden bg-black/40 border border-white/10 shadow-sm group cursor-pointer"
-                        title="Click to view full screen"
+                        title="Click to view full screen gallery"
                       >
                         {m.mediaType === "video" ? (
                           <video src={m.mediaData} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
@@ -437,15 +425,18 @@ export default function ContactProfileModal({
             )}
           </div>
         </motion.div>
-        {/* FULLSCREEN MEDIA VIEWER MODAL */}
-        {selectedMedia && (
+        {/* FULLSCREEN MEDIA VIEWER MODAL (Gallery Lightbox) */}
+        {selectedMediaIndex !== null && (
           <MediaViewerModal
-            isOpen={!!selectedMedia}
-            mediaType={selectedMedia.type}
-            mediaData={selectedMedia.data}
-            mediaName={selectedMedia.name}
-            mediaSize={selectedMedia.size}
-            onClose={() => setSelectedMedia(null)}
+            isOpen={selectedMediaIndex !== null}
+            items={photoVideos.map((m) => ({
+              type: (m.mediaType === "video" ? "video" : "image") as "image" | "video",
+              data: m.mediaData || "",
+              name: m.mediaName,
+              size: m.mediaSize,
+            }))}
+            initialIndex={selectedMediaIndex}
+            onClose={() => setSelectedMediaIndex(null)}
           />
         )}
       </div>

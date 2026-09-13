@@ -532,23 +532,23 @@ export default function ConversationList({
                     </div>
 
                     <div className="flex items-center justify-between gap-1.5">
-                      <p className="text-xs text-slate-400 truncate flex items-center gap-1.5 min-w-0">
+                      <p className="text-xs text-slate-400 truncate flex items-center gap-1 min-w-0">
                         {conv.lastMessage?.text ? (
                           <>
+                            <span className={`truncate ${ (conv.unreadCount || 0) > 0 ? "text-white font-semibold" : "text-slate-400"}`}>
+                              {conv.lastMessage.text}
+                            </span>
                             {conv.lastMessage.isMe && (
                               conv.lastMessage.isRead ? (
                                 <span className="text-[#007AFF] flex items-center flex-shrink-0" title="Read">
                                   <CheckCheck className="w-3.5 h-3.5 inline" />
                                 </span>
                               ) : (
-                                <span className="text-slate-400 flex items-center flex-shrink-0" title="Sent">
+                                <span className="text-slate-500 flex items-center flex-shrink-0" title="Sent">
                                   <Check className="w-3 h-3 inline" />
                                 </span>
                               )
                             )}
-                            <span className={`truncate ${ (conv.unreadCount || 0) > 0 ? "text-white font-semibold" : "text-slate-400"}`}>
-                              {conv.lastMessage.text}
-                            </span>
                           </>
                         ) : (
                           <span className="italic text-slate-500">No messages yet</span>
@@ -569,22 +569,23 @@ export default function ConversationList({
           )}
         </div>
 
-        {/* 7. CURRENT USER FOOTER BAR */}
-        <div className="px-3.5 py-3 border-t border-white/10 bg-[#0a0a1a] flex items-center justify-between flex-shrink-0">
+        {/* 7. CURRENT USER FOOTER BAR (Mobile-friendly spacious layout) */}
+        <div className="p-2.5 sm:p-3 border-t border-white/10 bg-[#0a0a1a]/95 backdrop-blur-xl flex items-center gap-2 flex-shrink-0">
+          {/* Profile Card */}
           <div
             onClick={onOpenProfile}
-            className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer group p-1.5 rounded-xl hover:bg-white/5 transition-all"
-            title="Edit Profile & Avatar"
+            className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group px-2.5 py-1.5 rounded-2xl bg-white/[0.05] hover:bg-white/[0.09] active:bg-white/[0.12] border border-white/10 transition-all shadow-sm active:scale-[0.98] h-[48px]"
+            title="Edit Profile & Settings"
           >
             <div className="relative flex-shrink-0">
               {currentUser.avatar ? (
                 <img
                   src={currentUser.avatar}
                   alt={currentUser.name}
-                  className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-500/40 group-hover:ring-blue-400 transition-all shadow-sm"
+                  className="w-8 h-8 rounded-full object-cover ring-2 ring-blue-500/40 group-hover:ring-blue-400 transition-all shadow-sm"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-md">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-md">
                   {getInitials(currentUser.name || "User")}
                 </div>
               )}
@@ -594,7 +595,7 @@ export default function ConversationList({
             <div className="min-w-0 flex-1">
               <div className="text-xs font-bold text-white truncate flex items-center gap-1.5 group-hover:text-blue-300 transition-colors">
                 <span className="truncate">{currentUser.name}</span>
-                <Settings className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-400 transition-colors flex-shrink-0" />
+                <Settings className="w-3 h-3 text-slate-400 group-hover:text-blue-400 group-hover:rotate-45 transition-all flex-shrink-0" />
               </div>
               <div className="text-[10px] text-slate-400 truncate font-mono mt-0.5">
                 {currentUser.statusMessage || "Active now"}
@@ -602,13 +603,15 @@ export default function ConversationList({
             </div>
           </div>
 
+          {/* Spacious Touch-Friendly Logout Card Button */}
           <button
             type="button"
             onClick={() => setShowLogoutConfirm(true)}
-            className="p-2.5 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/15 border border-transparent hover:border-red-500/30 transition-all cursor-pointer flex-shrink-0 ml-1 active:scale-95"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-2xl bg-red-500/10 hover:bg-red-500/20 active:bg-red-500/30 border border-red-500/25 text-red-400 transition-all cursor-pointer shadow-sm active:scale-95 flex-shrink-0 h-[48px]"
             title="Sign Out"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4 text-red-400 stroke-[2.2]" />
+            <span className="text-xs font-semibold text-red-300 tracking-tight">Logout</span>
           </button>
         </div>
       </aside>

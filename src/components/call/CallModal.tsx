@@ -678,12 +678,12 @@ export default function CallModal({
      B. FULL SCREEN / MODAL CALL INTERFACE
      ------------------------------------------------------------- */
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/90 sm:backdrop-blur-2xl">
       <motion.div
-        initial={{ opacity: 0, scale: 0.92 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.92 }}
-        className="relative w-full max-w-2xl bg-neutral-900 border border-white/15 rounded-3xl overflow-hidden shadow-2xl flex flex-col"
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="relative w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl bg-neutral-900 border-0 sm:border border-white/15 rounded-none sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
       >
         {/* TOP BAR */}
         <div className="p-4 flex items-center justify-between border-b border-white/10 z-10">
@@ -732,7 +732,7 @@ export default function CallModal({
         )}
 
         {/* MAIN VIDEO / AVATAR VIEWPORT */}
-        <div className="relative flex-1 min-h-[380px] bg-neutral-950 flex items-center justify-center overflow-hidden">
+        <div className="relative flex-1 min-h-0 bg-neutral-950 flex items-center justify-center overflow-hidden">
           {/* Remote Video Stream */}
           {call.callType === "video" && (
             <video
@@ -803,7 +803,7 @@ export default function CallModal({
         </div>
 
         {/* BOTTOM CALL CONTROLS */}
-        <div className="p-4 bg-neutral-900/90 border-t border-white/10 flex items-center justify-center gap-4">
+        <div className="p-4 sm:p-5 bg-neutral-900/95 border-t border-white/10 flex items-center justify-center gap-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {isIncoming ? (
             /* INCOMING ACTIONS: ACCEPT OR DECLINE */
             <div className="flex items-center gap-6">

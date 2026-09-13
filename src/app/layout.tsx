@@ -9,6 +9,22 @@ export const metadata: Metadata = {
   ),
   title: "iMessage — Next-Gen Encrypted Messaging",
   description: "Advanced Apple iMessage real-time messaging, screen effects, voice notes & WebRTC calling",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "iMessage",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-title": "iMessage",
+    "application-name": "iMessage",
+    "msapplication-TileColor": "#09090b",
+    "msapplication-tap-highlight": "no",
+    "format-detection": "telephone=no",
+  },
 };
 
 export const viewport: Viewport = {
@@ -17,7 +33,11 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#09090b",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+    { media: "(prefers-color-scheme: light)", color: "#09090b" },
+  ],
+  interactiveWidget: "resizes-visual",
 };
 
 export default function RootLayout({
@@ -27,6 +47,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="iMessage" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#09090b" />
+      </head>
       <body className="antialiased bg-neutral-950 text-white min-h-[100dvh] h-[100dvh] w-full overflow-hidden select-none">
         <Providers>{children}</Providers>
       </body>

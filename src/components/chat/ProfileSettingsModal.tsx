@@ -226,7 +226,7 @@ export default function ProfileSettingsModal({
           initial={{ opacity: 0, scale: 0.96, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 10 }}
-          className="w-full max-w-lg bg-[#0E0E12]/98 border border-white/15 rounded-3xl overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_30px_rgba(0,122,255,0.15)] backdrop-blur-3xl flex flex-col my-auto max-h-[92dvh]"
+          className="w-full max-w-lg bg-[#111116] border border-white/15 rounded-3xl overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_30px_rgba(0,122,255,0.15)] backdrop-blur-3xl flex flex-col my-auto max-h-[85dvh]"
         >
           {/* Header */}
           <div className="px-5 py-3.5 flex items-center justify-between border-b border-white/10 bg-white/[0.02] flex-shrink-0">
@@ -249,7 +249,7 @@ export default function ProfileSettingsModal({
           </div>
 
           {/* Symmetrical Tabs */}
-          <div className="px-5 pt-3 pb-1 border-b border-white/10 bg-white/[0.01] flex items-center gap-2 flex-shrink-0">
+          <div className="px-5 pt-3 pb-2 border-b border-white/10 bg-white/[0.01] flex items-center gap-2 flex-shrink-0">
             <button
               type="button"
               onClick={() => setActiveTab("profile")}
@@ -279,7 +279,7 @@ export default function ProfileSettingsModal({
           {/* TAB 1: PROFILE TAB */}
           {activeTab === "profile" && (
             <>
-              <form id="profile-form" onSubmit={handleSaveProfile} className="flex-1 overflow-y-auto flex flex-col min-h-0">
+              <form id="profile-form" onSubmit={handleSaveProfile} className="flex-1 overflow-y-auto overscroll-contain flex flex-col min-h-0">
                 {/* Avatar Hero section */}
                 <div className="bg-white/[0.015] py-5 flex flex-col items-center justify-center text-center space-y-3 relative overflow-hidden border-b border-white/10 flex-shrink-0">
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -318,10 +318,10 @@ export default function ProfileSettingsModal({
 
                   {/* Display Name */}
                   <div>
-                    <label className="text-[11px] font-bold text-neutral-200 block mb-1.5 tracking-wide uppercase font-mono">
+                    <label className="text-[11px] font-bold text-neutral-300 block mb-1.5 tracking-wide uppercase font-mono">
                       Display Name
                     </label>
-                    <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-neutral-800/90 border border-white/15 focus-within:border-[#007AFF] focus-within:ring-2 focus-within:ring-blue-500/25 rounded-xl transition-all">
+                    <div className="flex items-center gap-3 px-3.5 h-12 bg-neutral-850 border border-white/15 focus-within:border-[#007AFF] focus-within:ring-2 focus-within:ring-blue-500/25 rounded-xl transition-all">
                       <User className="w-4 h-4 text-[#007AFF] flex-shrink-0" />
                       <input
                         type="text"
@@ -336,10 +336,10 @@ export default function ProfileSettingsModal({
 
                   {/* Status / Bio */}
                   <div>
-                    <label className="text-[11px] font-bold text-neutral-200 block mb-1.5 tracking-wide uppercase font-mono">
+                    <label className="text-[11px] font-bold text-neutral-300 block mb-1.5 tracking-wide uppercase font-mono">
                       Status / Bio
                     </label>
-                    <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-neutral-800/90 border border-white/15 focus-within:border-[#007AFF] focus-within:ring-2 focus-within:ring-blue-500/25 rounded-xl transition-all">
+                    <div className="flex items-center gap-3 px-3.5 h-12 bg-neutral-850 border border-white/15 focus-within:border-[#007AFF] focus-within:ring-2 focus-within:ring-blue-500/25 rounded-xl transition-all">
                       <Smile className="w-4 h-4 text-[#30D158] flex-shrink-0" />
                       <input
                         type="text"
@@ -353,7 +353,7 @@ export default function ProfileSettingsModal({
 
                   {/* Avatar Picker */}
                   <div>
-                    <label className="text-[11px] font-bold text-neutral-200 block mb-2 tracking-wide uppercase font-mono">
+                    <label className="text-[11px] font-bold text-neutral-300 block mb-2 tracking-wide uppercase font-mono">
                       Choose Avatar Style
                     </label>
                     <AvatarPicker
@@ -366,7 +366,7 @@ export default function ProfileSettingsModal({
               </form>
 
               {/* Bottom Action Bar */}
-              <div className="px-5 py-3 border-t border-white/10 bg-neutral-950/98 backdrop-blur-xl flex items-center justify-between flex-shrink-0 rounded-b-3xl">
+              <div className="px-5 py-3 border-t border-white/10 bg-[#0c0c10] backdrop-blur-xl flex items-center justify-between flex-shrink-0 rounded-b-3xl">
                 <span className="text-[11px] text-neutral-400 flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-[#007AFF]" />
                   <span>Public details encrypted</span>
@@ -383,7 +383,7 @@ export default function ProfileSettingsModal({
                     type="submit"
                     form="profile-form"
                     disabled={savingProfile}
-                    className={`px-5 py-2 rounded-xl font-bold text-xs text-white shadow-lg transition-all flex items-center gap-2 cursor-pointer active:scale-95 ${
+                    className={`px-5 py-2.5 rounded-xl font-bold text-xs text-white shadow-lg transition-all flex items-center gap-2 cursor-pointer active:scale-95 ${
                       profileSuccess
                         ? "bg-[#30D158] shadow-[#30D158]/25"
                         : "bg-[#007AFF] hover:bg-[#0071EB] shadow-[#007AFF]/30 disabled:opacity-50"
@@ -410,232 +410,241 @@ export default function ProfileSettingsModal({
 
           {/* TAB 2: SECURITY & PASSWORD TAB */}
           {activeTab === "security" && (
-            <div className="flex-1 overflow-y-auto p-5 space-y-6 min-h-0">
-              {/* SECTION A: RESET / CHANGE PASSWORD */}
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3.5">
-                <div className="flex items-center gap-2.5 pb-2 border-b border-white/10">
-                  <KeyRound className="w-4 h-4 text-blue-400" />
-                  <div>
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
-                      Change Account Password
-                    </h4>
-                    <p className="text-[11px] text-neutral-400">Update your sign-in password</p>
+            <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
+              <div className="p-4 sm:p-5 space-y-6">
+                {/* SECTION A: CHANGE PASSWORD */}
+                <div className="rounded-2xl overflow-hidden border border-white/10 bg-[#16161c]">
+                  {/* Section Header */}
+                  <div className="flex items-center gap-3 px-4 py-3 bg-white/[0.03] border-b border-white/10">
+                    <div className="w-8 h-8 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center flex-shrink-0">
+                      <KeyRound className="w-4 h-4 text-[#007AFF]" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white tracking-tight">Change Password</h4>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">Update your account sign-in password</p>
+                    </div>
                   </div>
+
+                  <form onSubmit={handleUpdatePassword} className="p-4 sm:p-5 space-y-4">
+                    {passwordError && (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-300">
+                        <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                        <span>{passwordError}</span>
+                      </div>
+                    )}
+                    {passwordSuccess && (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>{passwordSuccess}</span>
+                      </div>
+                    )}
+
+                    {/* Current Password */}
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-300 block mb-1.5 uppercase font-mono tracking-wider">
+                        Current Password
+                      </label>
+                      <div className="flex items-center gap-3 px-3.5 h-12 bg-neutral-900/90 border border-white/15 focus-within:border-[#007AFF] focus-within:ring-2 focus-within:ring-blue-500/25 rounded-xl transition-all">
+                        <Lock className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                        <input
+                          type={showCurrentPass ? "text" : "password"}
+                          required
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          placeholder="Enter current password"
+                          className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 focus:outline-none font-medium"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPass(!showCurrentPass)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                          {showCurrentPass ? <EyeOff className="w-4 h-4 text-blue-400" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* New Password */}
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-300 block mb-1.5 uppercase font-mono tracking-wider">
+                        New Password
+                      </label>
+                      <div className="flex items-center gap-3 px-3.5 h-12 bg-neutral-900/90 border border-white/15 focus-within:border-[#007AFF] focus-within:ring-2 focus-within:ring-blue-500/25 rounded-xl transition-all">
+                        <KeyRound className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                        <input
+                          type={showNewPass ? "text" : "password"}
+                          required
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Minimum 6 characters"
+                          className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 focus:outline-none font-medium"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPass(!showNewPass)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                          {showNewPass ? <EyeOff className="w-4 h-4 text-blue-400" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-300 block mb-1.5 uppercase font-mono tracking-wider">
+                        Confirm New Password
+                      </label>
+                      <div className="flex items-center gap-3 px-3.5 h-12 bg-neutral-900/90 border border-white/15 focus-within:border-[#007AFF] focus-within:ring-2 focus-within:ring-blue-500/25 rounded-xl transition-all">
+                        <Check className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                        <input
+                          type={showConfirmPass ? "text" : "password"}
+                          required
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="Re-enter new password"
+                          className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 focus:outline-none font-medium"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPass(!showConfirmPass)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                          {showConfirmPass ? <EyeOff className="w-4 h-4 text-blue-400" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={savingPassword}
+                      className="w-full h-12 rounded-xl bg-[#007AFF] hover:bg-[#0071EB] disabled:opacity-50 text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] mt-2"
+                    >
+                      {savingPassword ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /><span>Updating Password...</span></>
+                      ) : (
+                        <><KeyRound className="w-4 h-4" /><span>Update Password</span></>
+                      )}
+                    </button>
+                  </form>
                 </div>
 
-                {passwordError && (
-                  <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-300 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                    <span>{passwordError}</span>
-                  </div>
-                )}
-
-                {passwordSuccess && (
-                  <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300 flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>{passwordSuccess}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleUpdatePassword} className="space-y-3">
-                  {/* Current Password */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-neutral-300 block mb-1">
-                      Current Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showCurrentPass ? "text" : "password"}
-                        required
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        placeholder="Enter current password"
-                        className="w-full px-3 py-2 pr-10 bg-neutral-900 border border-white/15 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-blue-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCurrentPass(!showCurrentPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white transition-colors"
-                      >
-                        {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
+                {/* SECTION B: SECURITY PIN */}
+                <div className="rounded-2xl overflow-hidden border border-white/10 bg-[#16161c]">
+                  {/* Section Header */}
+                  <div className="flex items-center gap-3 px-4 py-3 bg-white/[0.03] border-b border-white/10">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center flex-shrink-0">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white tracking-tight">Recovery PIN</h4>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">4-6 digit PIN for password recovery</p>
                     </div>
                   </div>
 
-                  {/* New Password */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-neutral-300 block mb-1">
-                      New Password (min 6 characters)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showNewPass ? "text" : "password"}
-                        required
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Enter new password"
-                        className="w-full px-3 py-2 pr-10 bg-neutral-900 border border-white/15 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-blue-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPass(!showNewPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white transition-colors"
-                      >
-                        {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-neutral-300 block mb-1">
-                      Confirm New Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showConfirmPass ? "text" : "password"}
-                        required
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Re-enter new password"
-                        className="w-full px-3 py-2 pr-10 bg-neutral-900 border border-white/15 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-blue-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPass(!showConfirmPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white transition-colors"
-                      >
-                        {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={savingPassword}
-                    className="w-full py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {savingPassword ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Updating Password...</span>
-                      </>
-                    ) : (
-                      <span>Update Password</span>
+                  <form onSubmit={handleUpdatePin} className="p-4 sm:p-5 space-y-4">
+                    {pinError && (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-xs text-red-300">
+                        <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                        <span>{pinError}</span>
+                      </div>
                     )}
-                  </button>
-                </form>
-              </div>
+                    {pinSuccess && (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span>{pinSuccess}</span>
+                      </div>
+                    )}
 
-              {/* SECTION B: SECURITY PIN (FOR FORGOT PASSWORD RECOVERY) */}
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3.5">
-                <div className="flex items-center gap-2.5 pb-2 border-b border-white/10">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <div>
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">
-                      Security PIN (Recovery Setting)
-                    </h4>
-                    <p className="text-[11px] text-neutral-400">
-                      Configure a 4-6 digit PIN to reset your password if forgotten
-                    </p>
-                  </div>
+                    {/* Password to authorize */}
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-300 block mb-1.5 uppercase font-mono tracking-wider">
+                        Current Account Password
+                      </label>
+                      <div className="flex items-center gap-3 px-3.5 h-12 bg-neutral-900/90 border border-white/15 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/25 rounded-xl transition-all">
+                        <Lock className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                        <input
+                          type={showPinCurrentPass ? "text" : "password"}
+                          required
+                          value={pinCurrentPass}
+                          onChange={(e) => setPinCurrentPass(e.target.value)}
+                          placeholder="Your current password"
+                          className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 focus:outline-none font-medium"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPinCurrentPass(!showPinCurrentPass)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                          {showPinCurrentPass ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* PIN input */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[11px] font-bold text-neutral-300 block uppercase font-mono tracking-wider">
+                          New Recovery PIN
+                        </label>
+                        <span className="text-[10px] text-neutral-400 font-mono">4-6 digits</span>
+                      </div>
+                      <div className="flex items-center gap-3 px-3.5 h-12 bg-neutral-900/90 border border-white/15 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/25 rounded-xl transition-all">
+                        <ShieldCheck className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                        <input
+                          type={showPin ? "text" : "password"}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          required
+                          value={securityPin}
+                          onChange={(e) => setSecurityPin(e.target.value)}
+                          placeholder="Enter 4-6 digit PIN"
+                          className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 focus:outline-none font-medium font-mono"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPin(!showPin)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                        >
+                          {showPin ? <EyeOff className="w-4 h-4 text-emerald-400" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm PIN */}
+                    <div>
+                      <label className="text-[11px] font-bold text-neutral-300 block mb-1.5 uppercase font-mono tracking-wider">
+                        Confirm Recovery PIN
+                      </label>
+                      <div className="flex items-center gap-3 px-3.5 h-12 bg-neutral-900/90 border border-white/15 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/25 rounded-xl transition-all">
+                        <Check className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                        <input
+                          type={showPin ? "text" : "password"}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          required
+                          value={confirmPin}
+                          onChange={(e) => setConfirmPin(e.target.value)}
+                          placeholder="Re-enter 4-6 digit PIN"
+                          className="flex-1 bg-transparent text-sm text-white placeholder-neutral-500 focus:outline-none font-medium font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={savingPin}
+                      className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] mt-2"
+                    >
+                      {savingPin ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /><span>Saving PIN...</span></>
+                      ) : (
+                        <><ShieldCheck className="w-4 h-4" /><span>Save Recovery PIN</span></>
+                      )}
+                    </button>
+                  </form>
                 </div>
-
-                {pinError && (
-                  <div className="p-2.5 rounded-xl bg-red-500/15 border border-red-500/30 text-xs text-red-300 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                    <span>{pinError}</span>
-                  </div>
-                )}
-
-                {pinSuccess && (
-                  <div className="p-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs text-emerald-300 flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>{pinSuccess}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleUpdatePin} className="space-y-3">
-                  {/* Current Password to verify ownership */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-neutral-300 block mb-1">
-                      Current Password (for authorization)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPinCurrentPass ? "text" : "password"}
-                        required
-                        value={pinCurrentPass}
-                        onChange={(e) => setPinCurrentPass(e.target.value)}
-                        placeholder="Verify your password"
-                        className="w-full px-3 py-2 pr-10 bg-neutral-900 border border-white/15 rounded-xl text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPinCurrentPass(!showPinCurrentPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white transition-colors"
-                      >
-                        {showPinCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 4-6 Digit Security PIN */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-neutral-300 block mb-1">
-                      New 4-6 Digit Security PIN
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPin ? "text" : "password"}
-                        maxLength={6}
-                        required
-                        value={securityPin}
-                        onChange={(e) => setSecurityPin(e.target.value)}
-                        placeholder="e.g. 123456"
-                        className="w-full px-3 py-2 pr-10 bg-neutral-900 border border-white/15 rounded-xl text-sm text-white placeholder-neutral-500 font-mono tracking-widest focus:outline-none focus:border-emerald-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPin(!showPin)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white transition-colors"
-                      >
-                        {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Confirm PIN */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-neutral-300 block mb-1">
-                      Confirm Security PIN
-                    </label>
-                    <input
-                      type={showPin ? "text" : "password"}
-                      maxLength={6}
-                      required
-                      value={confirmPin}
-                      onChange={(e) => setConfirmPin(e.target.value)}
-                      placeholder="Re-enter 4-6 digit PIN"
-                      className="w-full px-3 py-2 bg-neutral-900 border border-white/15 rounded-xl text-sm text-white placeholder-neutral-500 font-mono tracking-widest focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={savingPin}
-                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {savingPin ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Saving Security PIN...</span>
-                      </>
-                    ) : (
-                      <span>Save Recovery PIN</span>
-                    )}
-                  </button>
-                </form>
               </div>
             </div>
           )}

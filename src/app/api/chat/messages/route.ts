@@ -34,24 +34,24 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "conversationId is required" }, { status: 400 });
     }
 
-    // Verify user is in this conversation (lean projection)
-    const conversation = await Conversation.findOne({
-      _id: conversationId,
-      participants: currentUserId,
-    })
-      .select("_id")
-      .lean();
-
-    if (!conversation) {
+    // Verify user is in this conversation
+    const conversation = await Conversation.findById(conversationId).select("participants").lean();
+    if (!conversation || !conversation.participants?.includes(currentUserId)) {
       return NextResponse.json({ error: "Conversation not found or unauthorized" }, { status: 403 });
     }
 
-    // Fast indexed check: only execute write update if unread messages exist
-    const hasUnread = await Message.exists({
+    // Ultra-fast index query using { conversationId: 1, createdAt: 1 }
+    const messages = await Message.find({
       conversationId,
-      senderId: { $ne: currentUserId },
-      "readBy.userId": { $ne: currentUserId },
-    });
+      clearedFor: { $ne: currentUserId },
+    })
+      .sort({ createdAt: 1 })
+      .lean();
+
+    // Mark messages as read when incoming unread messages exist
+    const hasUnread = messages.some(
+      (m: any) => m.senderId !== currentUserId && (!m.readBy || !m.readBy.some((r: any) => r.userId === currentUserId))
+    );
 
     if (hasUnread) {
       await Message.updateMany(
@@ -69,21 +69,10 @@ export async function GET(req: Request) {
             },
           },
         }
-      );
+      ).catch(() => {});
     }
 
-    const messages = await Message.find({
-      conversationId,
-      clearedFor: { $ne: currentUserId },
-      $or: [
-        { expiresAt: null },
-        { expiresAt: { $gt: new Date() } }
-      ],
-    })
-      .sort({ createdAt: 1 })
-      .lean();
-
-    // Decrypt messages
+    // Decrypt messages with lightweight on-demand media streaming
     const formatted = messages.map((msg: any) => {
       let plainText = "";
       if (msg.isDeleted) {
@@ -96,6 +85,10 @@ export async function GET(req: Request) {
         });
       }
 
+      // If message has mediaData, point to on-demand cached media streaming endpoint
+      // to keep polling payload ultra-lightweight (<10KB instead of 20MB)
+      const mediaUrl = msg.mediaData ? `/api/chat/messages/media?id=${msg._id}` : null;
+
       return {
         _id: msg._id.toString(),
         conversationId: msg.conversationId,
@@ -106,7 +99,7 @@ export async function GET(req: Request) {
         text: plainText,
         effect: msg.effect || null,
         mediaType: msg.mediaType || null,
-        mediaData: msg.mediaData ? decryptField(msg.mediaData) : null,
+        mediaData: mediaUrl,
         mediaName: msg.mediaName || null,
         mediaSize: msg.mediaSize || null,
         audioDuration: msg.audioDuration || 0,
