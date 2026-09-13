@@ -95,7 +95,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased bg-neutral-950 text-white h-full w-full overflow-hidden select-none">
+      <body className="min-h-full bg-background text-foreground flex flex-col antialiased select-none">
         <Providers>{children}</Providers>
       </body>
     </html>
