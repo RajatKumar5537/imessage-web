@@ -771,7 +771,7 @@ export default function PrimeChatApp() {
   }
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-[#000000] text-white p-0 sm:p-2 md:p-3 overflow-hidden select-none relative font-sans">
+    <div className="fixed inset-0 w-full h-full flex items-center justify-center bg-[#000000] text-white p-0 sm:p-2 md:p-3 overflow-hidden select-none font-sans">
       {/* 🎆 FULL SCREEN PARTICLES / FIREWORKS ENGINE */}
       <FullScreenEffects
         effect={activeEffect}
@@ -784,7 +784,7 @@ export default function PrimeChatApp() {
         <div
           className={`${
             mobileView === "list" ? "flex" : "hidden"
-          } md:flex h-full w-full md:w-[340px] lg:w-[380px] flex-shrink-0 z-20 overflow-x-hidden`}
+          } md:flex flex-col h-full w-full md:w-[340px] lg:w-[380px] flex-shrink-0 z-20 overflow-hidden`}
         >
           <ConversationList
             conversations={conversations}

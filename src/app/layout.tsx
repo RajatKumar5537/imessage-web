@@ -37,7 +37,6 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#09090b" },
     { media: "(prefers-color-scheme: light)", color: "#09090b" },
   ],
-  interactiveWidget: "resizes-visual",
 };
 
 export default function RootLayout({
