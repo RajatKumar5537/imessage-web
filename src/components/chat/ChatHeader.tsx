@@ -36,6 +36,7 @@ interface ChatHeaderProps {
   onOpenSearch: () => void;
   onOpenInfo: () => void;
   onClearChat: () => void;
+  onCloseChat?: () => void;
   isTyping?: boolean;
   typingUserName?: string;
 }
@@ -44,6 +45,7 @@ export default function ChatHeader({
   conversation,
   totalUnreadCount = 0,
   onBackToConversations,
+  onCloseChat,
   onStartAudioCall,
   onStartVideoCall,
   onOpenSearch,
@@ -308,6 +310,18 @@ export default function ChatHeader({
             </>
           )}
         </div>
+
+        {/* Close Chat Cross Button (in top right area) */}
+        {onCloseChat && (
+          <button
+            type="button"
+            onClick={onCloseChat}
+            className="p-2 rounded-xl bg-white/[0.07] border border-white/10 hover:bg-red-500/20 text-slate-300 hover:text-red-400 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
+            title="Close chat"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </header>
   );

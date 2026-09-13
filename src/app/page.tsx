@@ -800,6 +800,10 @@ export default function PrimeChatApp() {
                     setActiveConversationId(null);
                   }
                 }}
+                onCloseChat={() => {
+                  setActiveConversationId(null);
+                  setMobileView("list");
+                }}
                 onStartAudioCall={() => handleStartCall("audio")}
                 onStartVideoCall={() => handleStartCall("video")}
                 onOpenSearch={() => setIsSearchModalOpen(true)}
