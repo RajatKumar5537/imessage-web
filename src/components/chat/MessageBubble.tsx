@@ -328,7 +328,7 @@ export default function MessageBubble({
               transition={motionProps.transition}
               onContextMenu={(e) => { e.preventDefault(); setShowTapback(true); }}
               onClick={() => setShowActions((v) => !v)}
-              className={`relative rounded-[20px] shadow-sm select-none touch-pan-y cursor-pointer px-3.5 py-2 sm:px-4 sm:py-2.5 ${
+              className={`relative rounded-[20px] shadow-sm select-none touch-pan-y cursor-pointer ${
                 message.isDeleted
                   ? "bg-[#2C2C2E] text-slate-400 italic border border-white/[0.06]"
                   : isMe
@@ -338,8 +338,12 @@ export default function MessageBubble({
               style={{
                 width: "fit-content",
                 maxWidth: "100%",
-                minWidth: "48px",
-                minHeight: "36px",
+                minWidth: "56px",
+                minHeight: "38px",
+                paddingLeft: "18px",
+                paddingRight: "18px",
+                paddingTop: "9px",
+                paddingBottom: "9px",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "center",

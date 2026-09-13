@@ -784,7 +784,7 @@ export default function PrimeChatApp() {
         <div
           className={`${
             mobileView === "chat" ? "flex" : "hidden"
-          } md:flex flex-col flex-1 h-full w-full max-w-full min-w-0 bg-[#000000] bg-radial-[at_top_right] from-blue-950/15 via-[#000000] to-[#000000] relative overflow-x-hidden`}
+          } md:flex flex-col flex-1 h-full min-h-0 w-full max-w-full min-w-0 bg-[#000000] bg-radial-[at_top_right] from-blue-950/15 via-[#000000] to-[#000000] relative overflow-hidden`}
         >
           {activeConversation ? (
             <>
@@ -812,9 +812,16 @@ export default function PrimeChatApp() {
               {/* MESSAGE FEED */}
               <div
                 ref={chatContainerRef}
-                className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4 relative overscroll-contain flex flex-col"
+                className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4 overscroll-contain"
+                data-scrollable="true"
+                style={{
+                  WebkitOverflowScrolling: "touch",
+                  touchAction: "pan-y",
+                }}
               >
-                <div className="w-full flex flex-col justify-end min-h-full gap-y-1 sm:gap-y-1.5 pb-4 sm:pb-6 pt-2">
+                <div className="w-full min-h-full flex flex-col gap-y-1 sm:gap-y-1.5 pb-4 sm:pb-6 pt-2">
+                  {/* Top flexible spacer: pushes messages to bottom when few, collapses to 0 when scrollable */}
+                  <div className="flex-1 min-h-0" />
                   {messages.length === 0 ? (
                     <div className="flex flex-col items-center justify-center min-h-[160px] my-auto text-center space-y-2.5 p-6 border border-dashed border-white/10 rounded-3xl bg-white/[0.03] backdrop-blur-md">
                       <div className="p-3 rounded-2xl bg-blue-500/20 text-[#007AFF] border border-blue-400/30 shadow-inner">
