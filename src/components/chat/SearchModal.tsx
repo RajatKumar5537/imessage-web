@@ -29,7 +29,13 @@ export default function SearchModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+      <div
+        style={{
+          paddingTop: "max(16px, calc(env(safe-area-inset-top, 0px) + 12px))",
+          paddingBottom: "max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))",
+        }}
+        className="safe-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}

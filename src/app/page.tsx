@@ -105,6 +105,12 @@ export default function PrimeChatApp() {
         h = Math.min(window.innerHeight, window.visualViewport.height);
       }
       document.documentElement.style.setProperty("--app-height", `${h}px`);
+
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const isStandalone = (window.navigator as any).standalone || window.matchMedia("(display-mode: standalone)").matches;
+      if (isIOS && isStandalone) {
+        document.documentElement.classList.add("ios-standalone");
+      }
     };
 
     updateAppHeight();

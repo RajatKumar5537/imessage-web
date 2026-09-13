@@ -127,7 +127,12 @@ export default function ChatHeader({
   };
 
   return (
-    <header className="flex items-center justify-between px-3 sm:px-5 pt-[max(0.625rem,env(safe-area-inset-top))] pb-2.5 sm:pb-3 border-b border-white/10 bg-[#070712]/95 backdrop-blur-xl z-30 select-none transition-colors flex-shrink-0">
+    <header
+      style={{
+        paddingTop: "max(14px, calc(env(safe-area-inset-top, 0px) + 8px))",
+      }}
+      className="safe-top-chat flex items-center justify-between px-3 sm:px-5 pb-2.5 sm:pb-3 border-b border-white/10 bg-[#070712]/95 backdrop-blur-xl z-30 select-none transition-colors flex-shrink-0"
+    >
       {/* LEFT: PARTNER AVATAR, NAME & STATUS */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile Back Button */}
@@ -316,10 +321,10 @@ export default function ChatHeader({
           <button
             type="button"
             onClick={onCloseChat}
-            className="w-8 h-8 rounded-full bg-white/[0.08] border border-white/10 hover:bg-red-500/20 text-slate-300 hover:text-red-400 transition-all cursor-pointer active:scale-95 flex items-center justify-center shadow-sm"
+            className="w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-full bg-red-500/20 hover:bg-red-500/30 active:bg-red-500/40 border border-red-500/35 text-red-300 hover:text-white transition-all cursor-pointer active:scale-90 flex items-center justify-center shadow-sm touch-manipulation flex-shrink-0"
             title="Close chat"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4 stroke-[2.5]" />
           </button>
         )}
       </div>

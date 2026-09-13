@@ -108,7 +108,13 @@ export default function ContactModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-lg">
+      <div
+        style={{
+          paddingTop: "max(16px, calc(env(safe-area-inset-top, 0px) + 12px))",
+          paddingBottom: "max(16px, calc(env(safe-area-inset-bottom, 0px) + 12px))",
+        }}
+        className="safe-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-lg"
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.96, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}

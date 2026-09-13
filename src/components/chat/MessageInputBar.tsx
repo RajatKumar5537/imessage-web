@@ -293,7 +293,12 @@ export default function MessageInputBar({
   };
 
   return (
-    <footer className="relative z-20 border-t border-white/10 bg-[#0A0A0E] px-3 sm:px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] select-none flex-shrink-0 transition-colors">
+    <footer
+      style={{
+        paddingBottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 8px))",
+      }}
+      className="safe-bottom-input relative z-20 border-t border-white/10 bg-[#0A0A0E] px-3 sm:px-6 pt-3 select-none flex-shrink-0 transition-colors"
+    >
       {/* 1. QUOTED REPLY BANNER */}
       {replyTo && (
         <div className="flex items-center justify-between p-2.5 mb-2.5 bg-[#1C1C1E] border border-blue-500/30 rounded-2xl text-xs backdrop-blur-xl">

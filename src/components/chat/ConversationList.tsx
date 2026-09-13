@@ -139,7 +139,12 @@ export default function ConversationList({
     <>
       <aside className="w-full h-full flex flex-col bg-[#070712] border-r border-white/10 select-none z-20 flex-shrink-0 overflow-hidden transition-colors">
         {/* 1. TOP HEADER: CURRENT SENDER + AES LOCK + ACTIONS */}
-        <div className="flex items-center justify-between px-3.5 sm:px-4 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5 border-b border-white/10 bg-[#0a0a1a] flex-shrink-0">
+        <div
+          style={{
+            paddingTop: "max(14px, calc(env(safe-area-inset-top, 0px) + 8px))",
+          }}
+          className="safe-top-header flex items-center justify-between px-3.5 sm:px-4 pb-3.5 border-b border-white/10 bg-[#0a0a1a] flex-shrink-0"
+        >
           <div
             onClick={onOpenProfile}
             className="flex items-center gap-2.5 min-w-0 cursor-pointer group select-none"
@@ -570,7 +575,12 @@ export default function ConversationList({
         </div>
 
         {/* 7. CURRENT USER FOOTER BAR (Mobile-friendly spacious layout) */}
-        <div className="p-2.5 sm:p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-white/10 bg-[#0a0a1a]/95 backdrop-blur-xl flex items-center gap-2 flex-shrink-0">
+        <div
+          style={{
+            paddingBottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) + 8px))",
+          }}
+          className="safe-bottom-footer p-2.5 sm:p-3 border-t border-white/10 bg-[#0a0a1a]/95 backdrop-blur-xl flex items-center gap-2 flex-shrink-0"
+        >
           {/* Profile Card */}
           <div
             onClick={onOpenProfile}
