@@ -37,6 +37,13 @@ export default function MessageInfoModal({
 
   const isRead = Boolean(message.isRead || (message.readBy && message.readBy.length > 0));
   const readList = message.readBy || [];
+  const isShortPreview = Boolean(
+    message.text &&
+    message.text.trim().length <= 3 &&
+    !message.text.includes(" ") &&
+    !message.text.includes("\n") &&
+    !message.mediaData
+  );
 
   return (
     <AnimatePresence>
@@ -46,11 +53,11 @@ export default function MessageInfoModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ duration: 0.18, ease: "easeOut" }}
-          className="w-full max-w-md bg-[#101018] border border-white/15 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+          className="w-full max-w-md bg-[#101018] border border-white/15 rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[80vh] my-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+          <div className="flex-shrink-0 px-5 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-[#007AFF] flex items-center justify-center">
                 <Info size={16} />
@@ -67,35 +74,49 @@ export default function MessageInfoModal({
           </div>
 
           {/* Body */}
-          <div className="p-5 overflow-y-auto space-y-5 scrollbar-thin">
+          <div className="flex-1 min-h-0 p-5 overflow-y-auto space-y-5 scrollbar-thin">
             {/* Message Bubble Preview */}
-            <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10">
-              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono mb-2">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-black/40 border border-white/10">
+              <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 font-mono mb-2.5">
                 Message Preview
               </div>
-              <div className={`p-3 rounded-2xl text-xs sm:text-sm text-white max-w-full ${message.isMe ? "bg-[#007AFF]" : "bg-[#26252A] border border-white/10"}`}>
-                {message.mediaType === "image" && message.mediaData && (
-                  <img
-                    src={message.mediaData}
-                    alt="attachment"
-                    className="max-h-40 rounded-xl object-cover mb-2"
-                  />
-                )}
-                {message.mediaType === "file" && (
-                  <div className="flex items-center gap-2 p-2 rounded-xl bg-black/20 mb-1">
-                    <FileText size={16} className="text-blue-200" />
-                    <span className="truncate">{message.mediaName || "File"}</span>
-                  </div>
-                )}
-                <p className="whitespace-pre-wrap break-words leading-relaxed font-normal">
-                  {message.text || (message.mediaType ? `[${message.mediaType.toUpperCase()}]` : "")}
-                </p>
-                {message.effect && (
-                  <div className="mt-1 text-[10px] text-blue-100 flex items-center gap-1 opacity-90">
-                    <Sparkles size={11} className="text-amber-300" />
-                    <span className="capitalize">{message.effect.replace("_", " ")}</span>
-                  </div>
-                )}
+              <div className={`flex w-full ${message.isMe ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`rounded-[20px] shadow-md select-text ${
+                    isShortPreview
+                      ? "w-fit min-w-[56px] min-h-[36px] px-4 py-2 flex items-center justify-center text-center"
+                      : "w-fit max-w-[85%] px-4 py-2.5 flex flex-col justify-center text-left"
+                  } ${
+                    message.isMe
+                      ? "bg-[#007AFF] text-white rounded-br-[5px]"
+                      : "bg-[#2C2C2E] text-white rounded-bl-[5px] border border-white/10"
+                  }`}
+                >
+                  {message.mediaType === "image" && message.mediaData && (
+                    <img
+                      src={message.mediaData}
+                      alt="attachment"
+                      className="max-h-40 rounded-xl object-cover mb-2"
+                    />
+                  )}
+                  {message.mediaType === "file" && (
+                    <div className="flex items-center gap-2 p-2 rounded-xl bg-black/20 mb-1">
+                      <FileText size={16} className="text-blue-200" />
+                      <span className="truncate">{message.mediaName || "File"}</span>
+                    </div>
+                  )}
+                  {message.text && (
+                    <p className={`whitespace-pre-wrap break-words [word-break:break-word] leading-[1.38] text-sm font-normal text-white m-0 p-0 ${isShortPreview ? "text-center" : "text-left"}`}>
+                      {message.text}
+                    </p>
+                  )}
+                  {message.effect && (
+                    <div className="mt-1 text-[10px] text-blue-100 flex items-center gap-1 opacity-90">
+                      <Sparkles size={11} className="text-amber-300" />
+                      <span className="capitalize">{message.effect.replace("_", " ")}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -200,11 +221,11 @@ export default function MessageInfoModal({
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-3 border-t border-white/10 bg-white/[0.02] flex justify-end">
+          <div className="flex-shrink-0 px-5 py-3.5 border-t border-white/10 bg-[#101018] flex justify-end z-10">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
+              className="px-5 py-2 bg-[#007AFF] hover:bg-[#0069D9] active:scale-95 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-md shadow-blue-500/20"
             >
               Done
             </button>
