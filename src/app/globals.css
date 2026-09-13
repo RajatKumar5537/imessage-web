@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #09090b;
-  --foreground: #f4f4f5;
+  color-scheme: dark;
+  --background: #030308;
+  --foreground: #f8fafc;
+  --card-bg: rgba(8, 8, 16, 0.55);
+  --border-color: rgba(255, 255, 255, 0.04);
+  --grid-color: rgba(255, 255, 255, 0.01);
+  --ring-track: rgba(255, 255, 255, 0.06);
   --app-height: 100%;
 }
 
@@ -56,6 +61,44 @@ body {
   -webkit-tap-highlight-color: transparent;
   margin: 0;
   padding: 0;
+}
+
+/* Cyber Tech Grid Background */
+.cyber-grid {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center;
+  -webkit-mask-image: radial-gradient(circle at center, black 50%, transparent 100%);
+  mask-image: radial-gradient(circle at center, black 50%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Custom Glassmorphism styles */
+.glass-card {
+  background: linear-gradient(135deg, rgba(8, 8, 18, 0.6) 0%, rgba(4, 4, 10, 0.75) 100%);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.glass-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2), transparent);
+  z-index: 1;
 }
 
 /* Allow scrolling ONLY inside explicitly designated containers */
