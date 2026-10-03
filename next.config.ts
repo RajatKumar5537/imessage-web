@@ -6,10 +6,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["mongoose", "bcryptjs"],
   images: {
     remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "**",
-      },
+      { protocol: "https", hostname: "api.dicebear.com" },
+      { protocol: "https", hostname: "raw.githubusercontent.com" },
     ],
   },
   env: {

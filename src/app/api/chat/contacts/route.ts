@@ -5,6 +5,7 @@ import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import Connection from "@/lib/models/Connection";
 import Conversation from "@/lib/models/Conversation";
+import { encryptField } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -27,13 +28,17 @@ export async function GET(req: Request) {
 
     // If searching for users to add
     if (searchEmail) {
+      if (searchEmail.length < 2) {
+        return NextResponse.json([]);
+      }
+      const safeSearch = searchEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const users = await User.find({
         $and: [
           { _id: { $ne: currentUserId } },
           {
             $or: [
-              { email: { $regex: searchEmail, $options: "i" } },
-              { name: { $regex: searchEmail, $options: "i" } },
+              { email: { $regex: safeSearch, $options: "i" } },
+              { name: { $regex: safeSearch, $options: "i" } },
             ],
           },
         ],
@@ -222,7 +227,7 @@ export async function PUT(req: Request) {
           type: "direct",
           participants: [connection.requesterId, connection.recipientId],
           lastMessage: {
-            text: "Connected on iMessage ✨",
+            text: encryptField("Connected on iMessage ✨"),
             senderId: currentUserId,
             senderName: currentUser.name,
             createdAt: new Date(),

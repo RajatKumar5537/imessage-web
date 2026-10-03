@@ -6,7 +6,8 @@ import User from "@/lib/models/User";
 import Call from "@/lib/models/Call";
 import Message from "@/lib/models/Message";
 import Conversation from "@/lib/models/Conversation";
-import { encryptMessage } from "@/lib/crypto";
+import { encryptMessage, encryptField } from "@/lib/crypto";
+import { userInConversation } from "@/lib/membership";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,9 @@ export async function GET(req: Request) {
 
     if (callId) {
       const call = await Call.findById(callId).lean();
+      if (!call || (call.callerId !== currentUserId && call.recipientId !== currentUserId)) {
+        return NextResponse.json({ error: "Call not found" }, { status: 404 });
+      }
       return NextResponse.json(call);
     }
 
@@ -73,7 +77,6 @@ export async function POST(req: Request) {
       offer,
       answer,
       candidate,
-      isCaller,
     } = await req.json();
 
     // 1. INITIATE A CALL
@@ -85,6 +88,13 @@ export async function POST(req: Request) {
       const recipient = await User.findById(recipientId);
       if (!recipient) {
         return NextResponse.json({ error: "Recipient not found" }, { status: 404 });
+      }
+
+      const recipientUserId = recipient._id.toString();
+      const callerInConversation = await userInConversation(conversationId, currentUserId);
+      const recipientInConversation = await userInConversation(conversationId, recipientUserId);
+      if (!callerInConversation || !recipientInConversation || recipientUserId === currentUserId) {
+        return NextResponse.json({ error: "Conversation not found or unauthorized" }, { status: 403 });
       }
 
       // Terminate any previous dangling calls
@@ -126,8 +136,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Call not found" }, { status: 404 });
     }
 
+    const isCallerParty = call.callerId === currentUserId;
+    const isRecipientParty = call.recipientId === currentUserId;
+    if (!isCallerParty && !isRecipientParty) {
+      return NextResponse.json({ error: "Call not found" }, { status: 404 });
+    }
+
     // 2. ACCEPT
     if (action === "accept") {
+      if (!isRecipientParty) {
+        return NextResponse.json({ error: "Only the recipient can accept this call" }, { status: 403 });
+      }
       const updateData: any = { status: "accepted" };
       if (answer) {
         updateData.answer = typeof answer === "string" ? answer : JSON.stringify(answer);
@@ -189,7 +208,7 @@ export async function POST(req: Request) {
           await Conversation.findByIdAndUpdate(existing.conversationId, {
             $set: {
               lastMessage: {
-                text: callText,
+                text: encryptField(callText),
                 senderId: existing.callerId,
                 senderName: existing.callerName,
                 createdAt: endedAt,
@@ -208,6 +227,9 @@ export async function POST(req: Request) {
 
     // 4. SIGNAL OFFER
     if (action === "signal-offer") {
+      if (!isCallerParty) {
+        return NextResponse.json({ error: "Only the caller can send the offer" }, { status: 403 });
+      }
       const updatedCall = await Call.findByIdAndUpdate(
         callId,
         { offer: typeof offer === "string" ? offer : JSON.stringify(offer) },
@@ -218,6 +240,9 @@ export async function POST(req: Request) {
 
     // 5. SIGNAL ANSWER
     if (action === "signal-answer") {
+      if (!isRecipientParty) {
+        return NextResponse.json({ error: "Only the recipient can send the answer" }, { status: 403 });
+      }
       const updatedCall = await Call.findByIdAndUpdate(
         callId,
         { answer: typeof answer === "string" ? answer : JSON.stringify(answer) },
@@ -230,7 +255,7 @@ export async function POST(req: Request) {
     if (action === "candidate") {
       if (candidate) {
         const candStr = typeof candidate === "string" ? candidate : JSON.stringify(candidate);
-        const updateField = isCaller ? "callerCandidates" : "recipientCandidates";
+        const updateField = isCallerParty ? "callerCandidates" : "recipientCandidates";
         await Call.findByIdAndUpdate(callId, {
           $push: { [updateField]: candStr },
         });

@@ -2,72 +2,60 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import bcrypt from "bcryptjs";
+import { clientIp, rateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
+const GENERIC_ERROR = "Invalid email or security PIN";
+
 export async function POST(req: Request) {
   try {
+    if (!rateLimit(`reset:${clientIp(req)}`, 5, 15 * 60 * 1000)) {
+      return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+    }
+
     const { email, password, securityPin } = await req.json();
 
     if (!email || !password || !securityPin) {
       return NextResponse.json(
-        { error: "All fields are required (Email, New Password, and 6-digit Security PIN)" },
+        { error: "Email, new password, and security PIN are required" },
         { status: 400 }
       );
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters long" },
+        { error: "Password must be at least 8 characters long" },
         { status: 400 }
       );
     }
 
-    if (String(securityPin).trim().length < 4) {
-      return NextResponse.json(
-        { error: "Security PIN must be at least 4 to 6 digits" },
-        { status: 400 }
-      );
+    const pin = String(securityPin).trim();
+    if (!/^\d{4,6}$/.test(pin)) {
+      return NextResponse.json({ error: GENERIC_ERROR }, { status: 403 });
     }
 
     await dbConnect();
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user) {
-      return NextResponse.json(
-        { error: "No account found with this email address" },
-        { status: 404 }
-      );
+    if (!user?.securityPin) {
+      return NextResponse.json({ error: GENERIC_ERROR }, { status: 403 });
     }
 
-    // Verify Security PIN if user already has one configured
-    if (user.securityPin) {
-      const isPinMatch = await bcrypt.compare(String(securityPin).trim(), user.securityPin);
-      if (!isPinMatch) {
-        return NextResponse.json(
-          { error: "Invalid Security PIN. Password reset denied." },
-          { status: 403 }
-        );
-      }
-    } else {
-      // Legacy user without PIN configured -> securely set this PIN for them
-      user.securityPin = await bcrypt.hash(String(securityPin).trim(), 10);
+    const isPinMatch = await bcrypt.compare(pin, user.securityPin);
+    if (!isPinMatch) {
+      return NextResponse.json({ error: GENERIC_ERROR }, { status: 403 });
     }
 
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(password, 12);
-    user.password = hashedPassword;
+    user.password = await bcrypt.hash(password, 12);
     await user.save();
 
     return NextResponse.json(
       { success: true, message: "Password updated successfully" },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("Forgot Password Error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to reset password" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to reset password" }, { status: 500 });
   }
 }

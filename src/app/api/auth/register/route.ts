@@ -1,20 +1,45 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
-
 import { getFallbackAvatar } from "@/lib/avatars";
+import { clientIp, rateLimit } from "@/lib/rateLimit";
+
+function inviteMatches(provided: string, expected: string): boolean {
+  const left = Buffer.from(provided);
+  const right = Buffer.from(expected);
+  if (left.length !== right.length) return false;
+  return crypto.timingSafeEqual(left, right);
+}
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password, avatar, securityPin } = await req.json();
+    if (!rateLimit(`register:${clientIp(req)}`, 5, 15 * 60 * 1000)) {
+      return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+    }
+
+    const { name, email, password, avatar, securityPin, inviteCode } = await req.json();
+
+    const expectedInvite = process.env.REGISTRATION_INVITE_CODE;
+    if (process.env.NODE_ENV === "production" && !expectedInvite) {
+      return NextResponse.json({ error: "Registration is unavailable" }, { status: 503 });
+    }
+    if (expectedInvite && !inviteMatches(String(inviteCode || ""), expectedInvite)) {
+      return NextResponse.json({ error: "Invalid invite code" }, { status: 403 });
+    }
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Name, email, and password are required" }, { status: 400 });
     }
 
-    if (password.length < 6) {
-      return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
+    if (password.length < 8) {
+      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+    }
+
+    const pin = String(securityPin || "").trim();
+    if (!/^\d{4,6}$/.test(pin)) {
+      return NextResponse.json({ error: "Security PIN must be 4 to 6 digits" }, { status: 400 });
     }
 
     await dbConnect();
@@ -22,20 +47,14 @@ export async function POST(req: Request) {
 
     const existingUser = await User.findOne({ email: cleanEmail });
     if (existingUser) {
-      return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    let hashedPin = "";
-    if (securityPin && String(securityPin).trim().length >= 4) {
-      hashedPin = await bcrypt.hash(String(securityPin).trim(), 10);
+      return NextResponse.json({ error: "Could not create an account with these details" }, { status: 409 });
     }
 
     const newUser = await User.create({
       name: name.trim(),
       email: cleanEmail,
-      password: hashedPassword,
-      securityPin: hashedPin,
+      password: await bcrypt.hash(password, 12),
+      securityPin: await bcrypt.hash(pin, 12),
       avatar: avatar || getFallbackAvatar(name.trim(), "user"),
       statusMessage: "Hey there! I am using iMessage 🚀",
       isOnline: true,
@@ -54,8 +73,8 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("Register Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to register account" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to register account" }, { status: 500 });
   }
 }

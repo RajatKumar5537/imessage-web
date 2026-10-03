@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
+import { isLimited, rateLimit } from "@/lib/rateLimit";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,16 +18,19 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Please enter an email and password");
         }
 
-        await dbConnect();
-        const user = await User.findOne({ email: credentials.email.toLowerCase().trim() });
-
-        if (!user) {
-          throw new Error("No user found with this email");
+        const email = credentials.email.toLowerCase().trim();
+        const attemptKey = `login:${email}`;
+        if (isLimited(attemptKey, 8)) {
+          throw new Error("Too many attempts. Try again later.");
         }
 
-        const isMatch = await bcrypt.compare(credentials.password, user.password);
-        if (!isMatch) {
-          throw new Error("Incorrect password");
+        await dbConnect();
+        const user = await User.findOne({ email });
+
+        const isMatch = user ? await bcrypt.compare(credentials.password, user.password) : false;
+        if (!user || !isMatch) {
+          rateLimit(attemptKey, 8, 15 * 60 * 1000);
+          throw new Error("Invalid email or password");
         }
 
         user.isOnline = true;
@@ -78,5 +82,5 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
     error: "/login",
   },
-  secret: process.env.NEXTAUTH_SECRET || "prime_chat_aes256_master_key_993817290123",
+  secret: process.env.NEXTAUTH_SECRET,
 };

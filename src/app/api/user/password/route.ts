@@ -34,8 +34,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Current password is incorrect" }, { status: 400 });
       }
 
-      if (!newPassword || newPassword.length < 6) {
-        return NextResponse.json({ error: "New password must be at least 6 characters" }, { status: 400 });
+      if (!newPassword || newPassword.length < 8) {
+        return NextResponse.json({ error: "New password must be at least 8 characters" }, { status: 400 });
       }
 
       user.password = await bcrypt.hash(newPassword, 12);
@@ -69,6 +69,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error: any) {
     console.error("Password/PIN Update Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to update security credentials" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update security credentials" }, { status: 500 });
   }
 }

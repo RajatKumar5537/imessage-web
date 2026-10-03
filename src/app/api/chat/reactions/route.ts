@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import Message from "@/lib/models/Message";
+import { userInConversation } from "@/lib/membership";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,11 @@ export async function POST(req: Request) {
 
     const message = await Message.findById(messageId);
     if (!message) {
+      return NextResponse.json({ error: "Message not found" }, { status: 404 });
+    }
+
+    const canReact = await userInConversation(message.conversationId, currentUserId);
+    if (!canReact) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 

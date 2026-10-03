@@ -6,6 +6,7 @@ import User from "@/lib/models/User";
 import Conversation from "@/lib/models/Conversation";
 import Message from "@/lib/models/Message";
 import { encryptMessage, decryptMessage, encryptField, decryptField } from "@/lib/crypto";
+import { userInConversation } from "@/lib/membership";
 
 export const dynamic = "force-dynamic";
 
@@ -325,6 +326,11 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 
+    const canAccess = await userInConversation(message.conversationId, currentUserId);
+    if (!canAccess) {
+      return NextResponse.json({ error: "Message not found" }, { status: 404 });
+    }
+
     if (isPinned !== undefined) {
       message.isPinned = Boolean(isPinned);
       await message.save();
@@ -378,6 +384,10 @@ export async function DELETE(req: Request) {
     const clearAll = searchParams.get("clearAll") === "true";
 
     if (clearAll && conversationId) {
+      const canClear = await userInConversation(conversationId, currentUserId);
+      if (!canClear) {
+        return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+      }
       await Conversation.findByIdAndUpdate(conversationId, {
         $addToSet: { clearedFor: currentUserId },
       });
@@ -394,6 +404,11 @@ export async function DELETE(req: Request) {
 
     const message = await Message.findById(messageId);
     if (!message) {
+      return NextResponse.json({ error: "Message not found" }, { status: 404 });
+    }
+
+    const canDelete = await userInConversation(message.conversationId, currentUserId);
+    if (!canDelete) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
 

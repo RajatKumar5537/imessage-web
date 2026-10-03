@@ -48,8 +48,8 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("New password must be at least 6 characters long.");
+    if (formData.password.length < 8) {
+      setError("New password must be at least 8 characters long.");
       return;
     }
 
@@ -126,7 +126,7 @@ export default function ForgotPasswordPage() {
           </div>
           <h1 className="login-title">Reset Password</h1>
           <p className="login-subtitle">
-            Enter your email, security PIN, and choose a new password
+            Enter the security PIN already saved on this account, then choose a new password
           </p>
         </div>
 

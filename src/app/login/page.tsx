@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [securityPin, setSecurityPin] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [selectedAvatarUrl, setSelectedAvatarUrl] = useState(DEFAULT_AVATAR);
@@ -35,6 +36,12 @@ export default function LoginPage() {
 
     try {
       if (isRegister) {
+        if (password.length < 8) {
+          throw new Error("Password must be at least 8 characters");
+        }
+        if (!/^\d{4,6}$/.test(securityPin.trim())) {
+          throw new Error("Security PIN must be 4 to 6 digits");
+        }
         const res = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -43,6 +50,7 @@ export default function LoginPage() {
             email: email.toLowerCase().trim(),
             password,
             securityPin: securityPin.trim(),
+            inviteCode: inviteCode.trim(),
             avatar: selectedAvatarUrl,
           }),
         });
@@ -228,17 +236,36 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Optional Security PIN during Registration */}
+          {isRegister && (
+            <div className="login-field">
+              <label className="login-label">Invite code</label>
+              <div className="login-glass-input-wrap relative flex items-center">
+                <ShieldCheck className="login-field-icon" />
+                <input
+                  type="password"
+                  required
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  placeholder="Invite code"
+                  className="login-input"
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Security PIN required so password recovery cannot reset an unprotected account */}
           {isRegister && (
             <div className="login-field">
               <div className="flex items-center justify-between mb-1.5">
-                <label className="login-label !mb-0">Security PIN (Optional)</label>
+                <label className="login-label !mb-0">Security PIN</label>
                 <span className="text-[11px] text-neutral-400">4-6 digits for recovery</span>
               </div>
               <div className="login-glass-input-wrap relative flex items-center">
                 <KeyRound className="login-field-icon" />
                 <input
                   type={showPin ? "text" : "password"}
+                  required
                   maxLength={6}
                   value={securityPin}
                   onChange={(e) => setSecurityPin(e.target.value)}

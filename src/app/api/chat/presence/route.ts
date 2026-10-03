@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import Presence from "@/lib/models/Presence";
+import { userInConversation } from "@/lib/membership";
 
 export const dynamic = "force-dynamic";
 
@@ -15,20 +16,32 @@ export async function GET(req: Request) {
     }
 
     await dbConnect();
-    const { searchParams } = new URL(req.url, "http://localhost:3000");
-    const conversationId = searchParams.get("conversationId");
-
-    const cutoff = new Date(Date.now() - 15 * 1000); // active within last 15s
-
-    const query: any = {
-      lastActiveAt: { $gt: cutoff },
-    };
-
-    if (conversationId) {
-      query.activeConversationId = conversationId;
+    let currentUserId = (session.user as any).id;
+    if (!currentUserId) {
+      const currentUser = await User.findOne({ email: session.user.email.toLowerCase().trim() }).lean();
+      if (!currentUser) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      currentUserId = currentUser._id.toString();
     }
 
-    const presences = await Presence.find(query).lean();
+    const { searchParams } = new URL(req.url, "http://localhost:3000");
+    const conversationId = searchParams.get("conversationId");
+    if (!conversationId) {
+      return NextResponse.json({ error: "conversationId is required" }, { status: 400 });
+    }
+
+    const allowed = await userInConversation(conversationId, currentUserId);
+    if (!allowed) {
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
+    }
+
+    const cutoff = new Date(Date.now() - 15 * 1000);
+
+    const presences = await Presence.find({
+      lastActiveAt: { $gt: cutoff },
+      activeConversationId: conversationId,
+    }).lean();
     return NextResponse.json(presences);
   } catch (error: any) {
     console.error("GET Presence Error:", error);
@@ -42,6 +55,8 @@ export async function POST(req: Request) {
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    await dbConnect();
 
     let currentUserId = (session.user as any).id;
     let userName = session.user.name || "User";
@@ -59,13 +74,23 @@ export async function POST(req: Request) {
 
     const { activeConversationId, isTypingIn } = await req.json();
 
+    let conversationId: string | null = activeConversationId || null;
+    let typingIn: string | null = isTypingIn || null;
+    if (conversationId && !(await userInConversation(conversationId, currentUserId))) {
+      conversationId = null;
+      typingIn = null;
+    }
+    if (typingIn && typingIn !== conversationId && !(await userInConversation(typingIn, currentUserId))) {
+      typingIn = null;
+    }
+
     const presencePromise = Presence.findOneAndUpdate(
       { userId: currentUserId },
       {
         userEmail,
         userName,
-        activeConversationId: activeConversationId || null,
-        isTypingIn: isTypingIn || null,
+        activeConversationId: conversationId,
+        isTypingIn: typingIn,
         lastActiveAt: new Date(),
       },
       { upsert: true, new: true }
