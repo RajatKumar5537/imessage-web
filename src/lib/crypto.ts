@@ -1,27 +1,82 @@
 import crypto from "crypto";
 
+const ALGORITHM_CBC = "aes-256-cbc";
 const ALGORITHM_GCM = "aes-256-gcm";
+const PREFIX = "enc:";
 
+// Derives a secure 32-byte key from ENCRYPTION_KEY or NEXTAUTH_SECRET.
 const getSecretKey = (): Buffer => {
-  const secret = process.env.ENCRYPTION_SECRET || process.env.NEXTAUTH_SECRET || "prime-chat-default-aes-secret-salt-2808";
-  return crypto.scryptSync(secret, "prime-chat-salt-2026", 32);
+  if (process.env.ENCRYPTION_KEY) {
+    try {
+      const buf = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
+      if (buf.length === 32) return buf;
+    } catch {
+      // fallback if key is invalid hex
+    }
+  }
+  const secret = process.env.ENCRYPTION_KEY || process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "Fatal Security Error: Missing ENCRYPTION_KEY or NEXTAUTH_SECRET in production environment! Refusing to encrypt with public fallback key."
+      );
+    }
+  }
+  return crypto.scryptSync(
+    secret || "default-fallback-personal-tracker-key-2808",
+    "personal-tracker-salt",
+    32
+  );
 };
 
 const SECRET_KEY = getSecretKey();
 
-export interface EncryptedPayload {
+/* =========================================================
+   1. Standard String Field Encryption (Used by Expenses)
+   ========================================================= */
+
+export function encrypt(text: string): string {
+  if (text === null || text === undefined) return "";
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv(ALGORITHM_CBC, SECRET_KEY, iv);
+  let encrypted = cipher.update(text, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return `${PREFIX}${iv.toString("hex")}:${encrypted}`;
+}
+
+export function decrypt(text: string): string {
+  if (!text || typeof text !== "string" || !text.startsWith(PREFIX)) {
+    return text; // Return as-is if not encrypted (supports existing plaintext data)
+  }
+  try {
+    const parts = text.substring(PREFIX.length).split(":");
+    const iv = Buffer.from(parts[0], "hex");
+    const encryptedText = parts[1];
+    const decipher = crypto.createDecipheriv(ALGORITHM_CBC, SECRET_KEY, iv);
+    let decrypted = decipher.update(encryptedText, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+    return decrypted;
+  } catch (err) {
+    console.error("Decryption failed:", err);
+    return text; // Fallback to raw string
+  }
+}
+
+export function isEncrypted(text: string): boolean {
+  return typeof text === "string" && text.startsWith(PREFIX);
+}
+
+/* =========================================================
+   2. Secret Chat AES-256-GCM Encryption (Used by Chat)
+   ========================================================= */
+
+export interface EncryptedData {
   content: string;
   iv: string;
   authTag: string;
 }
 
-/**
- * Encrypts a message using AES-256-GCM.
- */
-export function encryptMessage(text: string): EncryptedPayload {
-  if (text === null || text === undefined) {
-    return { content: "", iv: "", authTag: "" };
-  }
+export function encryptMessage(text: string): EncryptedData {
   const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(ALGORITHM_GCM, SECRET_KEY, iv);
   
@@ -36,9 +91,6 @@ export function encryptMessage(text: string): EncryptedPayload {
   };
 }
 
-/**
- * Decrypts an AES-256-GCM payload.
- */
 export function decryptMessage(data: { content?: string; iv?: string; authTag?: string }): string {
   try {
     if (!data.content || !data.iv || !data.authTag) return "";
@@ -51,8 +103,8 @@ export function decryptMessage(data: { content?: string; iv?: string; authTag?: 
     decrypted += decipher.final("utf8");
     return decrypted;
   } catch (err) {
-    console.error("Failed to decrypt prime-chat message:", err);
-    return "[Encrypted Message]";
+    console.error("Failed to decrypt message:", err);
+    return "[Encrypted Message - Unable to Decrypt]";
   }
 }
 
